@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@promptcraft/ui/components/templates/MainLayout.jsx';
-import { SettingsModal } from '@promptcraft/ui/components/organisms/SettingsModal.jsx';
-import { VideoBuilder } from '@promptcraft/ui/components/organisms/VideoBuilder.jsx';
-import { GrokBuilder } from '@promptcraft/ui/components/organisms/GrokBuilder.jsx';
 import { DallEBuilder } from '@promptcraft/ui/components/organisms/DallEBuilder.jsx';
 import { SDBuilder } from '@promptcraft/ui/components/organisms/SDBuilder/index.jsx';
-import { MidjourneyBuilder } from '@promptcraft/ui/components/organisms/MidjourneyBuilder.jsx';
 import { usePromptManager } from '@promptcraft/ui/hooks/usePromptManager.js';
 import { useDraggable } from '@promptcraft/ui/hooks/useDraggable.js';
 import { useHistory } from '@promptcraft/ui/hooks/useHistory.js';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from '@promptcraft/ui/utils/exportHelper.js';
+
+// Local overrides with updated models and removed Midjourney generation
+import { SettingsModal } from './components/SettingsModal.jsx';
+import { VideoBuilder } from './components/VideoBuilder.jsx';
+import { GrokBuilder } from './components/GrokBuilder.jsx';
+import { MidjourneyBuilder } from './components/MidjourneyBuilder.jsx';
 
 /**
  * Main PromptCraft Application

@@ -3,7 +3,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@promptcraft/ui/**/*.{js,jsx}",
+    "./node_modules/@promptcraft/ui/**/*.{js,jsx,ts,tsx}",
   ],
   darkMode: 'class',
   theme: {

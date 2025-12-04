@@ -34,23 +34,23 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@promptcraft/ui": "github:c0dezer019/promptcraft-ui",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "lucide-react": "^0.462.0",
+    "@promptcraft/ui": "github:c0dezer019/promptcraft-ui#fix/update-models-and-dark-mode",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2",
-    "@tauri-apps/plugin-sql": "^2"
+    "@tauri-apps/plugin-sql": "^2",
+    "lucide-react": "^0.462.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.6.0",
-    "vite": "^5.4.11",
-    "@tauri-apps/cli": "^2",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.15"
+    "tailwindcss": "^3.4.15",
+    "vite": "^5.4.11"
   }
 }

@@ -22,6 +22,7 @@ pub struct GenerationResult {
 }
 
 /// Progress update for streaming generation
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationProgress {
     pub percentage: f32,
@@ -31,16 +32,18 @@ pub struct GenerationProgress {
 /// Provider trait that all generation backends implement
 #[async_trait]
 pub trait GenerationProvider: Send + Sync {
-    /// Provider name (e.g., "openai", "google", "midjourney")
+    /// Provider name (e.g., "openai", "google", "grok")
     fn name(&self) -> &str;
 
     /// Check if provider is available (API key configured, etc.)
+    #[allow(dead_code)]
     async fn is_available(&self) -> bool;
 
     /// Generate content based on request
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult>;
 
     /// Get provider-specific configuration schema
+    #[allow(dead_code)]
     fn config_schema(&self) -> serde_json::Value;
 }
 
@@ -92,10 +95,6 @@ impl GenerationService {
                     api_key,
                     project_id: None
                 });
-                self.register_provider(Box::new(provider));
-            }
-            "midjourney" => {
-                let provider = midjourney::MidjourneyProvider::with_config(midjourney::MidjourneyConfig { api_key });
                 self.register_provider(Box::new(provider));
             }
             "grok" => {

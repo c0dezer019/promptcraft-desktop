@@ -46,6 +46,7 @@ impl JobProcessor {
     }
 
     /// Stop the job processor
+    #[allow(dead_code)]
     pub async fn stop(&self) {
         let mut is_running = self.is_running.write().await;
         *is_running = false;

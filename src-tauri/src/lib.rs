@@ -10,7 +10,6 @@ use generation::{GenerationService, processor::JobProcessor};
 use generation::providers::{
     openai::OpenAIProvider,
     google::GoogleProvider,
-    midjourney::MidjourneyProvider,
     grok::GrokProvider,
 };
 
@@ -111,7 +110,6 @@ fn init_generation_service() -> GenerationService {
     // Register providers (they'll check for API keys at runtime)
     service.register_provider(Box::new(OpenAIProvider::new()));
     service.register_provider(Box::new(GoogleProvider::new()));
-    service.register_provider(Box::new(MidjourneyProvider::new()));
     service.register_provider(Box::new(GrokProvider::new()));
 
     service

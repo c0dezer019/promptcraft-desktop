@@ -9,14 +9,16 @@ PromptCraft Desktop is a powerful desktop application for AI prompt engineering.
 ## Features
 
 ### Core Features
+
 - 🎬 **Video Generation**: Sora and Veo prompt builders
 - 🎨 **Image Generation**: DALL-E, Grok, Midjourney, and Stable Diffusion
-- 🔧 **ComfyUI Support**: Visual workflow builder with node templates
+- 🔧 **ComfyUI/A1111 Support**: Visual workflow builder with node templates
 - 🌓 **Dark Mode**: Eye-friendly interface
 - 💾 **Export**: Save prompts as markdown, JSON, or workflow files
 - 🎯 **Modifier Tags**: Organized categories for quick prompt enhancement
 
 ### Desktop-Specific Features
+
 - 💿 **SQLite Database**: Persistent local storage for workflows and jobs
 - 📁 **Native File Access**: Direct file system integration
 - 🔔 **System Notifications**: Desktop alerts for job completion
@@ -26,6 +28,8 @@ PromptCraft Desktop is a powerful desktop application for AI prompt engineering.
 - 📊 **Scene Management**: Organize prompts by project/scene
 - 🔄 **Auto-Updates**: Seamless application updates
 
+**Note on generating content**: This is a BYOK (Bring Your Own Key) for now. You'll need an API key with credits to generate videos, except for ComfyUI/A1111; you'll only need them installed and add models/loras.
+
 ## Installation
 
 ### Prerequisites
@@ -33,6 +37,7 @@ PromptCraft Desktop is a powerful desktop application for AI prompt engineering.
 - **Node.js** (v18 or higher)
 - **Rust** (latest stable) - [Install Rust](https://rustup.rs/)
 - **System Dependencies** (Linux):
+
   ```bash
   sudo apt install libwebkit2gtk-4.1-dev \
     build-essential \
@@ -53,13 +58,13 @@ git clone https://github.com/c0dezer019/promptcraft-desktop.git
 cd promptcraft-desktop
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode
-npm run tauri:dev
+pnpm tauri:dev
 
 # Build for production
-npm run tauri:build
+pnpm run tauri:build
 ```
 
 ## Usage
@@ -67,10 +72,10 @@ npm run tauri:build
 ### Development
 
 ```bash
-npm run dev          # Start frontend dev server only
-npm run tauri:dev    # Start full Tauri dev environment
-npm run build        # Build frontend
-npm run tauri:build  # Build desktop application
+pnpm run dev          # Start frontend dev server only
+pnpm run tauri:dev    # Start full Tauri dev environment
+pnpm run build        # Build frontend
+pnpm run tauri:build  # Build desktop application
 ```
 
 ### Production Build
@@ -84,12 +89,14 @@ The `tauri:build` command will create platform-specific installers:
 ## Architecture
 
 ### Frontend (React)
+
 - React 18 with Vite
 - Tailwind CSS for styling
 - Lucide React for icons
 - @promptcraft/ui component library
 
 ### Backend (Rust/Tauri)
+
 - Tauri 2.x framework
 - SQLite database with migrations
 - Provider configuration management
@@ -107,7 +114,7 @@ scenes       - Project/scene organization
 
 ## Project Structure
 
-```
+```text
 promptcraft-desktop/
 ├── src/                  # React frontend
 │   ├── App.jsx          # Main application
@@ -165,3 +172,25 @@ MIT © PromptCraft
 
 - **Issues**: [GitHub Issues](https://github.com/c0dezer019/promptcraft-desktop/issues)
 - **Documentation**: See [promptcraft-ui](https://github.com/c0dezer019/promptcraft-ui) for component docs
+
+## Roadmap
+
+- [ ] Add more support for different services like Runway, Luma, and Hailuo.
+- [ ] Add smarter selector for services and models.
+- [ ] A more comprehensive settings menu.
+- [ ] Options to install A1111 and/or ComfyUI directly from the app.
+- [ ] ComfyUI/A1111 features.
+  - [ ] Full management of A1111 and/or ComfyUI.
+    - [ ] Adding/removing checkpoints, loras, etc.
+    - [ ] Adjust settings.
+  - [ ] ComfyUI webui/PromptCraft UI mode.
+  - [ ] Storyboarding.
+    - [ ] Probably a node workflow like ComfyUI.
+  - [ ] Build workflows directly in-app.
+- [ ] Scene documentation.
+- [ ] Archive of previous generations produced in-app.
+- [ ] Reloadable workflows/scenes for regeneration.
+- [ ] About section
+- [ ] User Manual
+- [ ] Auto-updater
+- [ ] Ability to purchase tokens for easier (and cheaper) generation of content across multiple services.

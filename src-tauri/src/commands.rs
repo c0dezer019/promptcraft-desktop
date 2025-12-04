@@ -1,5 +1,5 @@
 use crate::db::{models::*, operations::*, Database};
-use crate::generation::{GenerationRequest, GenerationService};
+use crate::generation::GenerationService;
 use tauri::State;
 use std::sync::Arc;
 use tokio::sync::RwLock;

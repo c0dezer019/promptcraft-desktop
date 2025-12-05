@@ -6,7 +6,6 @@ import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButto
 import { GROK_HELPER_BADGES } from '@promptcraft/ui/constants/tagCategories.js';
 import { callAI } from '@promptcraft/ui/utils/aiApi.js';
 import { useGeneration } from '@promptcraft/ui/hooks/useGeneration.js';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { useProviders } from '../hooks/useProviders.js';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
@@ -26,7 +25,6 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
   const [newBadge, setNewBadge] = useState('');
 
   // Generation hooks
-  const { isDesktop } = usePlatform();
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
@@ -146,32 +144,35 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
               </button>
             )}
           </div>
+
+          {/* Generation Button - Outside Main Container */}
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !prompt}
+              className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate with {getProviderDisplayName(provider)}
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* AI Generation Section */}
-        {isDesktop && (
+        {/* Generation Status & Results */}
+        {(error || localError || latestJob || completedJobs.length > 0) && (
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <SectionHeader icon={Zap} title="AI Generation" />
+            <SectionHeader icon={Zap} title="Generation Status" />
 
             <div className="space-y-4 mt-4">
-              {/* Generation Button */}
-              <button
-                onClick={handleGenerate}
-                disabled={generating || !prompt}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all"
-              >
-                {generating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate with {getProviderDisplayName(provider)}
-                  </>
-                )}
-              </button>
 
               {/* Error Display */}
               {(error || localError) && (

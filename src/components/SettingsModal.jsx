@@ -14,7 +14,11 @@ export const SettingsModal = ({ isOpen, onClose }) => {
 
   // Enhancement settings (existing)
   const [provider, setProvider] = useState('gemini');
-  const [key, setKey] = useState('');
+  const [enhancementKeys, setEnhancementKeys] = useState({
+    gemini: '',
+    anthropic: '',
+    openai: ''
+  });
   const [model, setModel] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [saved, setSaved] = useState(false);
@@ -32,7 +36,18 @@ export const SettingsModal = ({ isOpen, onClose }) => {
       // Load enhancement settings
       const settings = loadAISettings();
       setProvider(settings.provider || 'gemini');
-      setKey(settings.key || '');
+
+      // Load keys for all enhancement providers
+      const geminiSettings = loadAISettings('gemini');
+      const anthropicSettings = loadAISettings('anthropic');
+      const openaiSettings = loadAISettings('openai');
+
+      setEnhancementKeys({
+        gemini: geminiSettings.key || '',
+        anthropic: anthropicSettings.key || '',
+        openai: openaiSettings.key || ''
+      });
+
       setModel(settings.model || '');
       setBaseUrl(settings.baseUrl || '');
 
@@ -52,9 +67,17 @@ export const SettingsModal = ({ isOpen, onClose }) => {
   }, [isOpen, isDesktop]);
 
   const handleSave = () => {
-    saveAISettings({ provider, key, model, baseUrl });
+    // Save settings for the current provider with its specific key
+    saveAISettings({ provider, key: enhancementKeys[provider], model, baseUrl });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const updateEnhancementKey = (value) => {
+    setEnhancementKeys(prev => ({
+      ...prev,
+      [provider]: value
+    }));
   };
 
   const handleGenSave = async () => {
@@ -192,12 +215,14 @@ export const SettingsModal = ({ isOpen, onClose }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">API Key</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">API Key for {provider === 'openai' ? 'OpenAI' : provider.charAt(0).toUpperCase() + provider.slice(1)}</label>
                 <div className="relative">
                   <input
                     type="password"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
+                    id={`enhancement-api-key-${provider}`}
+                    name={`enhancement-api-key-${provider}`}
+                    value={enhancementKeys[provider] || ''}
+                    onChange={(e) => updateEnhancementKey(e.target.value)}
                     placeholder={provider === 'gemini' ? "AIzaSy..." : "sk-..."}
                     className="w-full p-2.5 pl-3 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm placeholder-gray-400 dark:placeholder-gray-500"
                   />
@@ -290,7 +315,9 @@ export const SettingsModal = ({ isOpen, onClose }) => {
                           <div className="relative">
                             <input
                               type="password"
-                              value={config.apiKey}
+                              id={`generation-api-key-${providerKey}`}
+                              name={`generation-api-key-${providerKey}`}
+                              value={config.apiKey || ''}
                               onChange={(e) => updateGenProvider(providerKey, 'apiKey', e.target.value)}
                               placeholder={
                                 providerKey === 'openai' ? 'sk-...' :

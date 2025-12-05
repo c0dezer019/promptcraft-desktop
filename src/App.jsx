@@ -14,6 +14,7 @@ import { VideoBuilder } from './components/VideoBuilder.jsx';
 // Feature components
 import { ImageAnalysis } from './components/features/ImageAnalysis.jsx';
 import { SettingsModal } from './components/SettingsModal.jsx';
+import { SceneManager } from './components/features/SceneManager.jsx';
 
 // Constants
 import { DEFAULT_MODELS } from './constants/models.js';
@@ -34,6 +35,7 @@ export default function PromptCraft() {
   const [darkMode, setDarkMode] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showImageAnalysis, setShowImageAnalysis] = useState(false);
+  const [showSceneManager, setShowSceneManager] = useState(false);
 
   // Custom Hooks
   const {
@@ -145,6 +147,40 @@ export default function PromptCraft() {
     }
   };
 
+  const handleLoadScene = (scene) => {
+    // Load a scene from Scene Manager into the current builder
+    const { data } = scene;
+    if (!data) return;
+
+    const { category, model, prompt } = data;
+
+    // Switch to appropriate category
+    if (category) {
+      setActiveCategory(category);
+    }
+
+    // Set model if different
+    if (model && category) {
+      setSelectedModel(prev => ({
+        ...prev,
+        [category]: model
+      }));
+    }
+
+    // Load prompt data
+    if (prompt) {
+      const targetPromptKey = getPromptKey(model || currentModel);
+      if (prompt.main) updatePrompt(targetPromptKey, 'main', prompt.main);
+      if (prompt.modifiers) updatePrompt(targetPromptKey, 'modifiers', prompt.modifiers);
+      if (prompt.negative) updatePrompt(targetPromptKey, 'negative', prompt.negative);
+      if (prompt.nodes) updatePrompt(targetPromptKey, 'nodes', prompt.nodes);
+      if (prompt.params) updatePrompt(targetPromptKey, 'params', prompt.params);
+    }
+
+    // Close scene manager
+    setShowSceneManager(false);
+  };
+
   // Get current prompt data
   const currentPromptData = prompts[promptKey] || { main: '', modifiers: [] };
 
@@ -167,10 +203,19 @@ export default function PromptCraft() {
         selectedModel={currentModel}
         setSelectedModel={handleModelChange}
         onImageAnalysis={() => setShowImageAnalysis(true)}
+        onOpenSceneManager={() => setShowSceneManager(true)}
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
         openSettings={() => setShowSettings(true)}
       />
+
+      {/* Scene Manager */}
+      {showSceneManager && (
+        <SceneManager
+          onLoadScene={handleLoadScene}
+          onClose={() => setShowSceneManager(false)}
+        />
+      )}
 
       {/* Main Content */}
       <main className="pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">

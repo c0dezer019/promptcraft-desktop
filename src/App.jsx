@@ -10,6 +10,7 @@ import { TopNav } from './components/navigation/TopNav.jsx';
 // Builder components
 import { ImageBuilder } from './components/builders/ImageBuilder.jsx';
 import { VideoBuilder } from './components/VideoBuilder.jsx';
+import { LocalImageBuilder } from './components/builders/LocalImageBuilder.jsx';
 
 // Feature components
 import { ImageAnalysis } from './components/features/ImageAnalysis.jsx';
@@ -34,6 +35,11 @@ export default function PromptCraft() {
   const [selectedModel, setSelectedModel] = useState({
     image: DEFAULT_MODELS.image,
     video: DEFAULT_MODELS.video
+  });
+
+  // Local model state
+  const [selectedLocalModel, setSelectedLocalModel] = useState(() => {
+    return localStorage.getItem('selected_local_model') || null;
   });
 
   // UI state
@@ -84,6 +90,13 @@ export default function PromptCraft() {
   useEffect(() => {
     localStorage.setItem('generation_mode', generationMode);
   }, [generationMode]);
+
+  // Save selected local model to localStorage when it changes
+  useEffect(() => {
+    if (selectedLocalModel) {
+      localStorage.setItem('selected_local_model', selectedLocalModel);
+    }
+  }, [selectedLocalModel]);
 
   // Get current model for active category
   const currentModel = selectedModel[activeCategory];
@@ -225,6 +238,8 @@ export default function PromptCraft() {
         openSettings={() => setShowSettings(true)}
         generationMode={generationMode}
         setGenerationMode={setGenerationMode}
+        selectedLocalModel={selectedLocalModel}
+        setSelectedLocalModel={setSelectedLocalModel}
       />
 
       {/* Scene Manager */}
@@ -282,11 +297,13 @@ export default function PromptCraft() {
         ) : (
           /* Local Generation Mode */
           hasAnyConfiguredTool() ? (
-            <div className="text-center py-20">
-              <p className="text-gray-600 dark:text-gray-400">
-                Local generation interface coming soon...
-              </p>
-            </div>
+            <LocalImageBuilder
+              selectedModel={selectedLocalModel}
+              prompt={currentPromptData.main || ''}
+              setPrompt={(val) => updatePrompt('local', 'main', val)}
+              negativePrompt={currentPromptData.negative || ''}
+              setNegativePrompt={(val) => updatePrompt('local', 'negative', val)}
+            />
           ) : (
             <LocalEmptyState onConfigure={() => setShowLocalToolSetup(true)} />
           )

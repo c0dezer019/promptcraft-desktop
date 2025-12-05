@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, Sun, Moon, ScanSearch, Palette, Grid3x3 } from 'lucide-react';
 import { TabBar } from './TabBar.jsx';
 import { ModelSelector } from './ModelSelector.jsx';
+import { LocalModelSelector } from './LocalModelSelector.jsx';
 import { GenerationModeToggle } from './GenerationModeToggle.jsx';
 
 /**
@@ -19,7 +20,9 @@ export const TopNav = ({
   openSettings,
   onOpenSceneManager,
   generationMode,
-  setGenerationMode
+  setGenerationMode,
+  selectedLocalModel,
+  setSelectedLocalModel
 }) => {
   return (
     <header className="h-16 border-b border-gray-200 dark:border-gray-700 fixed w-full top-0 z-30 bg-white dark:bg-gray-900 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
@@ -48,11 +51,16 @@ export const TopNav = ({
 
         {/* Right: Model Selector + Actions */}
         <div className="flex items-center gap-2">
-          {generationMode === 'cloud' && (
+          {generationMode === 'cloud' ? (
             <ModelSelector
               category={activeCategory}
               value={selectedModel}
               onChange={setSelectedModel}
+            />
+          ) : (
+            <LocalModelSelector
+              value={selectedLocalModel}
+              onChange={setSelectedLocalModel}
             />
           )}
 

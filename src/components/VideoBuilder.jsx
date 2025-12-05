@@ -51,7 +51,6 @@ export const VideoBuilder = ({
   const [resolution, setResolution] = useState('1080p');
 
   // Generation hooks
-  const { isDesktop } = usePlatform();
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
@@ -229,6 +228,27 @@ export const VideoBuilder = ({
               </div>
             </div>
           </div>
+
+          {/* Generation Button - Outside Parameters Container */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !prompt}
+              className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating Video...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate with {getProviderDisplayName(provider)}
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="space-y-2 h-full overflow-y-auto pr-2 custom-scrollbar">
@@ -248,35 +268,12 @@ export const VideoBuilder = ({
         </div>
       </div>
 
-      {/* AI Generation Section */}
-      {isDesktop && (
+      {/* Generation Status & Results */}
+      {(error || localError || latestJob || completedJobs.length > 0) && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <SectionHeader icon={Zap} title="AI Generation" />
+          <SectionHeader icon={Zap} title="Generation Status" />
 
           <div className="space-y-4 mt-4">
-            {/* Generation Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={generating || !prompt}
-              className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Generating Video...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate with {getProviderDisplayName(provider)}
-                </>
-              )}
-            </button>
-
-            {/* Info about video generation */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Video generation may take several minutes. You can track progress below.
-            </p>
 
             {/* Error Display */}
             {(error || localError) && (

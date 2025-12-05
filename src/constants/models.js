@@ -3,8 +3,8 @@
  * LOCAL OVERRIDE: Complete model configuration system
  */
 
-// Image Models organized by tier
-export const IMAGE_MODELS = {
+// Cloud Image Models organized by tier
+export const CLOUD_IMAGE_MODELS = {
   standard: [
     {
       id: 'gpt-image-1-mini',
@@ -59,30 +59,6 @@ export const IMAGE_MODELS = {
       }
     }
   ],
-  local: [
-    {
-      id: 'comfy',
-      name: 'ComfyUI',
-      provider: 'local',
-      category: 'image',
-      tier: 'local',
-      parameters: {}
-    },
-    {
-      id: 'a1111',
-      name: 'Automatic1111',
-      provider: 'local',
-      category: 'image',
-      tier: 'local',
-      parameters: {
-        steps: 20,
-        cfg_scale: 7,
-        width: 512,
-        height: 512,
-        sampler: 'Euler a'
-      }
-    }
-  ],
   promptOnly: [
     {
       id: 'midjourney',
@@ -95,8 +71,33 @@ export const IMAGE_MODELS = {
   ]
 };
 
-// Video Models organized by tier
-export const VIDEO_MODELS = {
+// Local generation tools (not models - these are backends)
+export const LOCAL_TOOLS = [
+  {
+    id: 'comfyui',
+    name: 'ComfyUI',
+    hasAPI: true,
+    defaultPort: 8188,
+    defaultUrl: 'http://127.0.0.1:8188'
+  },
+  {
+    id: 'a1111',
+    name: 'Automatic1111',
+    hasAPI: true,
+    defaultPort: 7860,
+    defaultUrl: 'http://127.0.0.1:7860'
+  },
+  {
+    id: 'invokeai',
+    name: 'InvokeAI',
+    hasAPI: true,
+    defaultPort: 9090,
+    defaultUrl: 'http://127.0.0.1:9090'
+  }
+];
+
+// Cloud Video Models organized by tier
+export const CLOUD_VIDEO_MODELS = {
   standard: [
     {
       id: 'sora',
@@ -213,6 +214,10 @@ export const VIDEO_MODELS = {
   ]
 };
 
+// Legacy exports for backward compatibility
+export const IMAGE_MODELS = CLOUD_IMAGE_MODELS;
+export const VIDEO_MODELS = CLOUD_VIDEO_MODELS;
+
 // Default models per category
 export const DEFAULT_MODELS = {
   image: 'gpt-image-1-mini',
@@ -220,18 +225,25 @@ export const DEFAULT_MODELS = {
 };
 
 /**
- * Get all models for a category
+ * Get all cloud models for a category
  */
 export function getAllModels(category) {
-  const modelsByCategory = category === 'image' ? IMAGE_MODELS : VIDEO_MODELS;
+  const modelsByCategory = category === 'image' ? CLOUD_IMAGE_MODELS : CLOUD_VIDEO_MODELS;
   return Object.values(modelsByCategory).flat();
 }
 
 /**
- * Get model by ID
+ * Get all cloud models (image + video)
+ */
+export function getAllCloudModels() {
+  return [...getAllModels('image'), ...getAllModels('video')];
+}
+
+/**
+ * Get model by ID (cloud models only)
  */
 export function getModelById(modelId) {
-  const allModels = [...getAllModels('image'), ...getAllModels('video')];
+  const allModels = getAllCloudModels();
   return allModels.find(m => m.id === modelId);
 }
 
@@ -252,7 +264,7 @@ export function getModelTier(modelId) {
 }
 
 /**
- * Get models by provider
+ * Get models by provider (cloud models only)
  */
 export function getModelsByProvider(provider, category = null) {
   let allModels = [];
@@ -260,8 +272,15 @@ export function getModelsByProvider(provider, category = null) {
   if (category) {
     allModels = getAllModels(category);
   } else {
-    allModels = [...getAllModels('image'), ...getAllModels('video')];
+    allModels = getAllCloudModels();
   }
 
   return allModels.filter(m => m.provider === provider);
+}
+
+/**
+ * Get local tool by ID
+ */
+export function getLocalToolById(toolId) {
+  return LOCAL_TOOLS.find(t => t.id === toolId);
 }

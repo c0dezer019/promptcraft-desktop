@@ -175,8 +175,8 @@ MIT © PromptCraft
 
 ## Roadmap
 
-- [ ] Add more support for different services like Runway, Luma, and Hailuo.
-- [ ] Add smarter selector for services and models.
+- [x] Add more support for different services like Runway, Luma, and Hailuo.
+- [x] Add smarter selector for services and models.
 - [ ] A more comprehensive settings menu.
 - [ ] Options to install A1111 and/or ComfyUI directly from the app.
 - [ ] ComfyUI/A1111 features.

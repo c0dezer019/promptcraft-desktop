@@ -1,26 +1,39 @@
 import { useState, useEffect } from 'react';
-import { MainLayout } from '@promptcraft/ui/components/templates/MainLayout.jsx';
-import { DallEBuilder } from '@promptcraft/ui/components/organisms/DallEBuilder.jsx';
-import { SDBuilder } from '@promptcraft/ui/components/organisms/SDBuilder/index.jsx';
 import { usePromptManager } from '@promptcraft/ui/hooks/usePromptManager.js';
-import { useDraggable } from '@promptcraft/ui/hooks/useDraggable.js';
 import { useHistory } from '@promptcraft/ui/hooks/useHistory.js';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from '@promptcraft/ui/utils/exportHelper.js';
 
-// Local overrides with updated models and removed Midjourney generation
-import { SettingsModal } from './components/SettingsModal.jsx';
+// Navigation components
+import { TopNav } from './components/navigation/TopNav.jsx';
+
+// Builder components
+import { ImageBuilder } from './components/builders/ImageBuilder.jsx';
 import { VideoBuilder } from './components/VideoBuilder.jsx';
-import { GrokBuilder } from './components/GrokBuilder.jsx';
-import { MidjourneyBuilder } from './components/MidjourneyBuilder.jsx';
+
+// Feature components
+import { ImageAnalysis } from './components/features/ImageAnalysis.jsx';
+import { SettingsModal } from './components/SettingsModal.jsx';
+
+// Constants
+import { DEFAULT_MODELS } from './constants/models.js';
 
 /**
  * Main PromptCraft Application
+ * Redesigned with top navigation and Image/Video tabs
  */
 export default function PromptCraft() {
-  const [activeTool, setActiveTool] = useState('sora');
+  // Navigation state
+  const [activeCategory, setActiveCategory] = useState('image');
+  const [selectedModel, setSelectedModel] = useState({
+    image: DEFAULT_MODELS.image,
+    video: DEFAULT_MODELS.video
+  });
+
+  // UI state
   const [darkMode, setDarkMode] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showImageAnalysis, setShowImageAnalysis] = useState(false);
 
   // Custom Hooks
   const {
@@ -32,7 +45,6 @@ export default function PromptCraft() {
     editEnhancer,
     syncEnhancerAcrossBuilders
   } = usePromptManager();
-  const { footerHeight, setFooterHeight } = useDraggable(85);
   const { history, addToHistory } = useHistory();
   const { platform, isDesktop, isWeb } = usePlatform();
 
@@ -55,125 +67,180 @@ export default function PromptCraft() {
     }
   }, [darkMode]);
 
+  // Get current model for active category
+  const currentModel = selectedModel[activeCategory];
+
+  // Get prompt key based on model (map models to prompt storage keys)
+  const getPromptKey = (model) => {
+    // Map model IDs to prompt storage keys
+    const modelToKey = {
+      // Image models
+      'gpt-image-1-mini': 'dalle',
+      'gpt-image-1': 'dalle',
+      'grok-2-image': 'grok',
+      'aurora': 'grok',
+      'comfy': 'comfy',
+      'a1111': 'a1111',
+      'midjourney': 'midjourney',
+      // Video models - OpenAI
+      'sora': 'sora',
+      'sora-2-pro': 'sora',
+      // Video models - Google
+      'veo': 'veo',
+      'veo-3.1-generate-preview': 'veo',
+      // Video models - Runway
+      'runway-gen3-alpha': 'runway',
+      'runway-gen3-alpha-turbo': 'runway',
+      // Video models - Luma
+      'luma-ray': 'luma',
+      'luma-dream-machine': 'luma',
+      // Video models - Hailuo
+      'hailuo-minimax': 'hailuo',
+    };
+    return modelToKey[model] || model;
+  };
+
+  const promptKey = getPromptKey(currentModel);
+
   // Handlers
   const handleCopy = async () => {
-    const text = getCurrentPromptText(activeTool);
+    const text = getCurrentPromptText(promptKey);
     const success = await copyToClipboard(text);
     if (success) {
-      addToHistory(activeTool, text);
+      addToHistory(promptKey, text);
     }
   };
 
   const handleExport = () => {
-    if (activeTool === 'comfy') {
+    if (currentModel === 'comfy') {
       exportComfyWorkflow(prompts.comfy);
-    } else if (activeTool === 'a1111') {
+    } else if (currentModel === 'a1111') {
       exportA1111Text(prompts.a1111);
     } else {
-      const text = getCurrentPromptText(activeTool);
-      exportPromptToMarkdown(activeTool, prompts[activeTool], text);
+      const text = getCurrentPromptText(promptKey);
+      exportPromptToMarkdown(promptKey, prompts[promptKey], text);
     }
   };
 
   const handleClear = () => {
-    clearPrompt(activeTool);
+    clearPrompt(promptKey);
   };
 
-  // Get final prompt text
-  const finalPromptText = getCurrentPromptText(activeTool);
+  const handleModelChange = (model) => {
+    setSelectedModel(prev => ({
+      ...prev,
+      [activeCategory]: model
+    }));
+  };
+
+  const handleImageAnalysisPrompt = (prompt) => {
+    // When user selects a prompt from image analysis, set it for the current image model
+    if (activeCategory === 'image') {
+      updatePrompt(promptKey, 'main', prompt);
+    } else {
+      // Switch to image tab and set prompt
+      setActiveCategory('image');
+      const imagePromptKey = getPromptKey(selectedModel.image);
+      updatePrompt(imagePromptKey, 'main', prompt);
+    }
+  };
+
+  // Get current prompt data
+  const currentPromptData = prompts[promptKey] || { main: '', modifiers: [] };
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Settings Modal */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
 
-      {/* Main Layout */}
-      <MainLayout
-        activeTool={activeTool}
-        setActiveTool={setActiveTool}
-        history={history}
+      {/* Image Analysis Modal */}
+      <ImageAnalysis
+        isOpen={showImageAnalysis}
+        onClose={() => setShowImageAnalysis(false)}
+        onGeneratePrompt={handleImageAnalysisPrompt}
+      />
+
+      {/* Top Navigation */}
+      <TopNav
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        selectedModel={currentModel}
+        setSelectedModel={handleModelChange}
+        onImageAnalysis={() => setShowImageAnalysis(true)}
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
         openSettings={() => setShowSettings(true)}
-        finalPromptText={finalPromptText}
-        onCopy={handleCopy}
-        onExport={handleExport}
-        onClear={handleClear}
-        footerHeight={footerHeight}
-        setFooterHeight={setFooterHeight}
-      >
-        {/* Render appropriate builder based on active tool */}
-        {activeTool === 'sora' && (
+      />
+
+      {/* Main Content */}
+      <main className="pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
+        {/* Category: Image */}
+        {activeCategory === 'image' && (
+          <ImageBuilder
+            model={currentModel}
+            prompt={currentPromptData.main || ''}
+            setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
+            modifiers={currentPromptData.modifiers || []}
+            setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
+            negativePrompt={currentPromptData.negative || ''}
+            setNegativePrompt={(val) => updatePrompt(promptKey, 'negative', val)}
+            nodes={currentPromptData.nodes || []}
+            setNodes={(val) => updatePrompt(promptKey, 'nodes', val)}
+            params={currentPromptData.params || {}}
+            setParams={(val) => updatePrompt(promptKey, 'params', val)}
+            deleteEnhancer={deleteEnhancer}
+            editEnhancer={editEnhancer}
+            syncEnhancer={syncEnhancerAcrossBuilders}
+          />
+        )}
+
+        {/* Category: Video */}
+        {activeCategory === 'video' && (
           <VideoBuilder
-            type="sora"
-            prompt={prompts.sora.main}
-            setPrompt={(val) => updatePrompt('sora', 'main', val)}
-            modifiers={prompts.sora.modifiers}
-            setModifiers={(val) => updatePrompt('sora', 'modifiers', val)}
+            model={currentModel}
+            prompt={currentPromptData.main || ''}
+            setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
+            modifiers={currentPromptData.modifiers || []}
+            setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
             deleteEnhancer={deleteEnhancer}
             editEnhancer={editEnhancer}
             syncEnhancer={syncEnhancerAcrossBuilders}
           />
         )}
+      </main>
 
-        {activeTool === 'veo' && (
-          <VideoBuilder
-            type="veo"
-            prompt={prompts.veo.main}
-            setPrompt={(val) => updatePrompt('veo', 'main', val)}
-            modifiers={prompts.veo.modifiers}
-            setModifiers={(val) => updatePrompt('veo', 'modifiers', val)}
-            deleteEnhancer={deleteEnhancer}
-            editEnhancer={editEnhancer}
-            syncEnhancer={syncEnhancerAcrossBuilders}
-          />
-        )}
+      {/* Footer Bar with Actions */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-3 px-4 z-20">
+        <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="hidden sm:inline">Model: </span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              {currentModel}
+            </span>
+          </div>
 
-        {activeTool === 'grok' && (
-          <GrokBuilder
-            prompt={prompts.grok.main}
-            setPrompt={(val) => updatePrompt('grok', 'main', val)}
-          />
-        )}
-
-        {activeTool === 'midjourney' && (
-          <MidjourneyBuilder
-            prompt={prompts.midjourney.main}
-            setPrompt={(val) => updatePrompt('midjourney', 'main', val)}
-            modifiers={prompts.midjourney.modifiers}
-            setModifiers={(val) => updatePrompt('midjourney', 'modifiers', val)}
-            deleteEnhancer={deleteEnhancer}
-            editEnhancer={editEnhancer}
-            syncEnhancer={syncEnhancerAcrossBuilders}
-          />
-        )}
-
-        {activeTool === 'dalle' && (
-          <DallEBuilder
-            prompt={prompts.dalle?.main || ''}
-            setPrompt={(val) => updatePrompt('dalle', 'main', val)}
-          />
-        )}
-
-        {(activeTool === 'comfy' || activeTool === 'a1111') && (
-          <SDBuilder
-            type={activeTool}
-            prompt={prompts[activeTool].main}
-            setPrompt={(val) => updatePrompt(activeTool, 'main', val)}
-            negativePrompt={prompts[activeTool].negative}
-            setNegativePrompt={(val) => updatePrompt(activeTool, 'negative', val)}
-            modifiers={prompts[activeTool].modifiers}
-            setModifiers={(val) => updatePrompt(activeTool, 'modifiers', val)}
-            nodes={prompts[activeTool].nodes}
-            setNodes={(val) => updatePrompt(activeTool, 'nodes', val)}
-            params={prompts[activeTool].params}
-            setParams={(val) => updatePrompt(activeTool, 'params', val)}
-            deleteEnhancer={deleteEnhancer}
-            editEnhancer={editEnhancer}
-            syncEnhancer={syncEnhancerAcrossBuilders}
-          />
-        )}
-      </MainLayout>
-    </>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClear}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleExport}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              Export
+            </button>
+            <button
+              onClick={handleCopy}
+              className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              Copy Prompt
+            </button>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

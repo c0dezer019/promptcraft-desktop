@@ -9,13 +9,14 @@ import { callAI } from '@promptcraft/ui/utils/aiApi.js';
 import { useGeneration } from '@promptcraft/ui/hooks/useGeneration.js';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { useProviders } from '../hooks/useProviders.js';
+import { getModelById, getModelProvider } from '../constants/models.js';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 /**
  * VideoBuilder Component - For Sora / Veo video generation
- * LOCAL OVERRIDE: Updated to use correct models (sora-2, veo-3.1)
+ * LOCAL OVERRIDE: Updated to use model prop and derive provider dynamically
  *
- * @param {string} type - 'sora' | 'veo'
+ * @param {string} model - Model ID (e.g., 'sora', 'sora-2-pro', 'veo', 'veo-3.1-generate-preview')
  * @param {string} prompt - Main prompt text
  * @param {function} setPrompt - Prompt setter
  * @param {Array} modifiers - Modifier tags
@@ -26,7 +27,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
  * @param {string} workflowId - Current workflow ID (optional, for generation)
  */
 export const VideoBuilder = ({
-  type,
+  model,
   prompt,
   setPrompt,
   modifiers,
@@ -36,7 +37,11 @@ export const VideoBuilder = ({
   syncEnhancer,
   workflowId = 'default'
 }) => {
-  const isSora = type === 'sora';
+  // Derive provider from model
+  const modelConfig = getModelById(model);
+  const provider = getModelProvider(model);
+  const isSora = provider === 'openai';
+
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [categories, setCategories] = useState(VIDEO_CATEGORIES);
 
@@ -48,19 +53,34 @@ export const VideoBuilder = ({
   // Generation hooks
   const { isDesktop } = usePlatform();
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
-  const { getProviderDisplayName, getVideoModel } = useProviders();
+  const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
-
-  // Map builder type to provider and model
-  const provider = isSora ? 'openai' : 'google';
-  const model = isSora ? 'sora-2' : 'veo-3.1-generate-preview';
 
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
-    const systemPrompt = isSora
-      ? "You are an expert prompt engineer for OpenAI Sora. Take the user's concept and rewrite it into a highly detailed, physically accurate video description. Focus on lighting, camera movement, texture, and temporal consistency. Keep it under 100 words. Return ONLY the prompt."
-      : "You are an expert prompt engineer for Google Veo. Rewrite the user's concept into a cinematic 1080p video description. Focus on composition, color grading, and smooth motion. Return ONLY the prompt.";
+
+    // Get enhance prompt based on provider
+    let systemPrompt;
+    switch (provider) {
+      case 'openai':
+        systemPrompt = "You are an expert prompt engineer for OpenAI Sora. Take the user's concept and rewrite it into a highly detailed, physically accurate video description. Focus on lighting, camera movement, texture, and temporal consistency. Keep it under 100 words. Return ONLY the prompt.";
+        break;
+      case 'google':
+        systemPrompt = "You are an expert prompt engineer for Google Veo. Rewrite the user's concept into a cinematic 1080p video description. Focus on composition, color grading, and smooth motion. Return ONLY the prompt.";
+        break;
+      case 'runway':
+        systemPrompt = "You are an expert prompt engineer for Runway Gen-3. Create a detailed video prompt focusing on visual aesthetics, motion dynamics, and cinematic quality. Be descriptive but concise (under 100 words). Return ONLY the prompt.";
+        break;
+      case 'luma':
+        systemPrompt = "You are an expert prompt engineer for Luma Dream Machine. Write a vivid, detailed video description emphasizing natural motion, lighting, and photorealistic quality. Keep it under 100 words. Return ONLY the prompt.";
+        break;
+      case 'hailuo':
+        systemPrompt = "You are an expert prompt engineer for Hailuo MiniMax. Create a detailed video prompt focusing on smooth motion, high-quality rendering, and cinematic composition. Keep it under 100 words. Return ONLY the prompt.";
+        break;
+      default:
+        systemPrompt = "You are an expert video prompt engineer. Transform the user's concept into a detailed, cinematic video description. Focus on visual quality, motion, and atmosphere. Keep it under 100 words. Return ONLY the prompt.";
+    }
 
     const result = await callAI(prompt, systemPrompt);
     setPrompt(result);
@@ -94,7 +114,7 @@ export const VideoBuilder = ({
 
   const handleSyncTag = (tag) => {
     if (syncEnhancer) {
-      syncEnhancer(tag, type);
+      syncEnhancer(tag, 'video');
     }
   };
 
@@ -122,10 +142,34 @@ export const VideoBuilder = ({
     await generate(provider, fullPrompt, model, parameters);
   };
 
-  // Duration options based on provider
-  const durationOptions = isSora
-    ? ['4 Seconds', '5 Seconds', '8 Seconds', '10 Seconds', '12 Seconds']
-    : ['4 Seconds', '6 Seconds', '8 Seconds'];
+  // Get duration and aspect ratio options from model config
+  const getDurationOptions = () => {
+    const durations = modelConfig?.parameters?.duration || [5];
+    return durations.map(d => `${d} Seconds`);
+  };
+
+  const getAspectRatioOptions = () => {
+    const ratios = modelConfig?.parameters?.aspect_ratio || ['16:9', '9:16', '1:1'];
+    const labels = {
+      '16:9': 'Widescreen',
+      '9:16': 'Vertical',
+      '1:1': 'Square',
+      '2.35:1': 'Cinematic',
+      '4:3': '4:3',
+      '3:4': '3:4',
+      '21:9': 'Ultrawide',
+      '9:21': 'Vertical Ultrawide'
+    };
+    return ratios.map(r => `${r} (${labels[r] || r})`);
+  };
+
+  const getResolutionOptions = () => {
+    return modelConfig?.parameters?.resolution || ['720p', '1080p'];
+  };
+
+  const durationOptions = getDurationOptions();
+  const aspectRatioOptions = getAspectRatioOptions();
+  const resolutionOptions = getResolutionOptions();
 
   return (
     <div className="space-y-6">
@@ -134,7 +178,7 @@ export const VideoBuilder = ({
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 relative">
             <SectionHeader
               icon={Video}
-              title={`Main ${isSora ? 'Sora' : 'Veo'} Prompt`}
+              title={`Main ${modelConfig?.name || (isSora ? 'Sora' : 'Veo')} Prompt`}
               extra={
                 <EnhanceButton
                   isEnhancing={isEnhancing}
@@ -171,7 +215,7 @@ export const VideoBuilder = ({
                   className="mt-1"
                   value={aspectRatio}
                   onChange={(e) => setAspectRatio(e.target.value)}
-                  options={['16:9 (Widescreen)', '9:16 (Vertical)', '1:1 (Square)', '2.35:1 (Cinematic)']}
+                  options={aspectRatioOptions}
                 />
               </div>
               <div>
@@ -180,7 +224,7 @@ export const VideoBuilder = ({
                   className="mt-1"
                   value={resolution}
                   onChange={(e) => setResolution(e.target.value)}
-                  options={['720p', '1080p']}
+                  options={resolutionOptions}
                 />
               </div>
             </div>

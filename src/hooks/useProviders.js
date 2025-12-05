@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
+import {
+  IMAGE_MODELS,
+  VIDEO_MODELS,
+  DEFAULT_MODELS,
+  getAllModels,
+  getModelById,
+  getModelTier
+} from '../constants/models.js';
 
 /**
  * Hook for managing AI generation providers
  * Lists available providers and their configurations
  *
- * LOCAL OVERRIDE: Updated for gpt-image-1, Sora, Veo, and Grok
+ * LOCAL OVERRIDE: Updated for new model tier system
  */
 export function useProviders() {
   const { isDesktop } = usePlatform();
@@ -49,31 +57,48 @@ export function useProviders() {
       'openai': 'OpenAI',
       'google': 'Google Veo',
       'grok': 'Grok (xAI)',
+      'runway': 'Runway',
+      'luma': 'Luma AI',
+      'hailuo': 'Hailuo',
+      'local': 'Local',
+      'none': 'N/A',
     };
     return names[providerName] || providerName;
   }, []);
 
   /**
-   * Get default model for provider
+   * Get default model for a category (Standard tier)
    */
-  const getDefaultModel = useCallback((providerName) => {
-    const defaults = {
-      'openai': 'gpt-image-1',
-      'google': 'veo-3.1-generate-preview',
-      'grok': 'grok-2-image',
-    };
-    return defaults[providerName] || 'default';
+  const getDefaultModel = useCallback((category) => {
+    return DEFAULT_MODELS[category] || DEFAULT_MODELS.image;
   }, []);
 
   /**
-   * Get video model for provider (for video generation)
+   * Get all models for a category
    */
-  const getVideoModel = useCallback((providerName) => {
-    const videoModels = {
-      'openai': 'sora-2',
-      'google': 'veo-3.1-generate-preview',
-    };
-    return videoModels[providerName] || null;
+  const getModelsByCategory = useCallback((category) => {
+    return getAllModels(category);
+  }, []);
+
+  /**
+   * Get models grouped by tier for a category
+   */
+  const getModelsByTier = useCallback((category) => {
+    return category === 'image' ? IMAGE_MODELS : VIDEO_MODELS;
+  }, []);
+
+  /**
+   * Get tier for a specific model
+   */
+  const getModelTierInfo = useCallback((modelId) => {
+    return getModelTier(modelId);
+  }, []);
+
+  /**
+   * Get model configuration by ID
+   */
+  const getModelConfig = useCallback((modelId) => {
+    return getModelById(modelId);
   }, []);
 
   // Auto-load providers on mount
@@ -89,6 +114,9 @@ export function useProviders() {
     isProviderAvailable,
     getProviderDisplayName,
     getDefaultModel,
-    getVideoModel,
+    getModelsByCategory,
+    getModelsByTier,
+    getModelTierInfo,
+    getModelConfig,
   };
 }

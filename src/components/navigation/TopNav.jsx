@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Sun, Moon, ScanSearch, Palette } from 'lucide-react';
+import { Settings, Sun, Moon, ScanSearch, Palette, Grid3x3 } from 'lucide-react';
 import { TabBar } from './TabBar.jsx';
 import { ModelSelector } from './ModelSelector.jsx';
 
@@ -15,7 +15,8 @@ export const TopNav = ({
   onImageAnalysis,
   darkMode,
   toggleDarkMode,
-  openSettings
+  openSettings,
+  onOpenSceneManager
 }) => {
   return (
     <header className="h-16 border-b border-gray-200 dark:border-gray-700 fixed w-full top-0 z-30 bg-white dark:bg-gray-900 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
@@ -45,6 +46,15 @@ export const TopNav = ({
             value={selectedModel}
             onChange={setSelectedModel}
           />
+
+          {/* Scene Manager Button */}
+          <button
+            onClick={onOpenSceneManager}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+            title="Scene Manager"
+          >
+            <Grid3x3 className="w-5 h-5" />
+          </button>
 
           {/* Image Analysis Button */}
           <button

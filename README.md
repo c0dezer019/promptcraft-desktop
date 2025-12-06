@@ -28,7 +28,7 @@ PromptCraft Desktop is a powerful desktop application for AI prompt engineering.
 - 📊 **Scene Management**: Organize prompts by project/scene
 - 🔄 **Auto-Updates**: Seamless application updates
 
-**Note on generating content**: This is a BYOK (Bring Your Own Key) for now. You'll need an API key with credits to generate videos, except for ComfyUI/A1111; you'll only need them installed and add models/loras.
+**Note on generating content**: This is a BYOK (Bring Your Own Key) for now. You'll need an API key with credits to generate videos, except for ComfyUI/A1111; you'll only need them installed and add your own checkpoint/models.
 
 ## Installation
 

@@ -176,3 +176,14 @@ pub async fn list_providers(
     let service = service.read().await;
     Ok(service.list_providers())
 }
+
+#[tauri::command]
+pub async fn configure_local_provider(
+    service: State<'_, Arc<RwLock<GenerationService>>>,
+    provider: String,
+    api_url: String,
+) -> Result<(), String> {
+    let mut service = service.write().await;
+    service.configure_local_provider(&provider, api_url)
+        .map_err(|e| e.to_string())
+}

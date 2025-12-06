@@ -33,7 +33,12 @@ export const LocalImageBuilder = ({
     'LMS'
   ];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!activeTool || !selectedModel) {
+      console.error('No active tool or model selected');
+      return;
+    }
+
     console.log('Generate with local tool:', {
       tool: activeTool?.name,
       model: selectedModel,
@@ -46,7 +51,41 @@ export const LocalImageBuilder = ({
       sampler,
       seed
     });
-    // TODO: Implement actual generation via Tauri backend
+
+    // Submit generation via Tauri backend
+    if (window.__TAURI__) {
+      try {
+        const { invoke } = window.__TAURI__.core;
+
+        const parameters = {
+          model: selectedModel,
+          negative_prompt: negativePrompt,
+          steps,
+          cfg_scale: cfgScale,
+          width,
+          height,
+          sampler,
+          seed
+        };
+
+        // Submit generation job
+        const job = await invoke('submit_generation', {
+          workflowId: null,
+          provider: activeTool.id,
+          prompt,
+          model: selectedModel,
+          parameters
+        });
+
+        console.log('Generation job submitted:', job);
+        // TODO: Show job status and poll for results
+      } catch (error) {
+        console.error('Failed to submit generation:', error);
+        alert(`Generation failed: ${error}`);
+      }
+    } else {
+      alert('Desktop mode required for local generation');
+    }
   };
 
   return (

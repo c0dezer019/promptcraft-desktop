@@ -107,6 +107,32 @@ impl GenerationService {
         Ok(())
     }
 
+    /// Configure a local provider with an API URL
+    pub fn configure_local_provider(&mut self, provider_name: &str, api_url: String) -> Result<()> {
+        use providers::*;
+
+        // Remove old provider and register new one with config
+        self.providers.remove(provider_name);
+
+        match provider_name {
+            "a1111" => {
+                let provider = a1111::A1111Provider::with_config(a1111::A1111Config { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            "comfyui" => {
+                let provider = comfyui::ComfyUIProvider::with_config(comfyui::ComfyUIConfig { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            "invokeai" => {
+                let provider = invokeai::InvokeAIProvider::with_config(invokeai::InvokeAIConfig { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            _ => return Err(anyhow::anyhow!("Unknown local provider: {}", provider_name)),
+        }
+
+        Ok(())
+    }
+
     /// Generate using a specific provider
     pub async fn generate(
         &self,

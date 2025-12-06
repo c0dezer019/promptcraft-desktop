@@ -186,7 +186,7 @@ MIT © PromptCraft
   - [ ] ComfyUI webui/PromptCraft UI mode.
   - [ ] Storyboarding.
     - [ ] Probably a node workflow like ComfyUI.
-  - [ ] Build workflows directly in-app.
+  - [x] Build workflows directly in-app.
 - [ ] Scene documentation.
 - [ ] Archive of previous generations produced in-app.
 - [ ] Reloadable workflows/scenes for regeneration.

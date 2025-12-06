@@ -119,15 +119,30 @@ export const LocalToolSetup = ({ isOpen, onClose }) => {
   };
 
   // Save configuration
-  const handleSave = () => {
+  const handleSave = async () => {
+    const finalApiUrl = apiUrl || getDefaultApiUrl(selectedTool);
     const config = {
       enabled: true,
       installPath: installPath || null,
-      apiUrl: apiUrl || getDefaultApiUrl(selectedTool)
+      apiUrl: finalApiUrl
     };
 
     const success = saveLocalToolConfig(selectedTool, config);
     if (success) {
+      // Also configure in Tauri backend if in desktop mode
+      if (window.__TAURI__) {
+        try {
+          const { invoke } = window.__TAURI__.core;
+          await invoke('configure_local_provider', {
+            provider: selectedTool,
+            apiUrl: finalApiUrl
+          });
+        } catch (error) {
+          console.error('Failed to configure provider in backend:', error);
+          // Continue anyway - frontend config is saved
+        }
+      }
+
       setSaved(true);
       setTimeout(() => {
         setSaved(false);

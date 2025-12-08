@@ -5,6 +5,8 @@ import {
     loadLocalToolConfigs,
     saveLocalToolConfig,
 } from '../../utils/localToolConfig.js';
+import { invoke } from '@tauri-apps/api/core';
+import { fetch } from '@tauri-apps/plugin-http';
 
 /**
  * LocalToolSetup Component
@@ -37,7 +39,8 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
     // Get default API URL for a tool
     const getDefaultApiUrl = toolId => {
         const tool = LOCAL_TOOLS.find(t => t.id === toolId);
-        return tool?.defaultUrl || 'http://127.0.0.1:8188';
+        return tool?.defaultUrl || '127.0.0.1:8188'; g
+        
     };
 
     // Handle tool selection change
@@ -92,17 +95,8 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
 
         try {
             // Attempt to fetch from the API
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                signal: AbortSignal.timeout(5000), // 5 second timeout
-            });
-
-            if (response.ok || response.status === 404) {
-                // 404 is ok - server is running but endpoint not found
-                setConnectionStatus('success');
-            } else {
-                setConnectionStatus('error');
-            }
+            await fetch(apiUrl, { mode: 'no-cors' });
+            setConnectionStatus('success');
         } catch (error) {
             console.error('Connection test failed:', error);
             setConnectionStatus('error');

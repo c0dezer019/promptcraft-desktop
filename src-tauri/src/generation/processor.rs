@@ -3,8 +3,8 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use super::{GenerationRequest, GenerationService};
 use crate::db::{models::*, operations::JobOps};
-use super::{GenerationService, GenerationRequest};
 
 /// Job processor that consumes jobs from the database queue
 pub struct JobProcessor {
@@ -59,7 +59,7 @@ impl JobProcessor {
     ) -> Result<()> {
         // Get all pending jobs
         let pending_jobs: Vec<Job> = sqlx::query_as(
-            "SELECT * FROM jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 10"
+            "SELECT * FROM jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 10",
         )
         .fetch_all(pool)
         .await?;
@@ -77,7 +77,8 @@ impl JobProcessor {
                         result: None,
                         error: Some(e.to_string()),
                     },
-                ).await;
+                )
+                .await;
             }
         }
 
@@ -99,24 +100,29 @@ impl JobProcessor {
                 result: None,
                 error: None,
             },
-        ).await?;
+        )
+        .await?;
 
         // Parse job data
         let job_data: serde_json::Value = serde_json::from_str(&job.data)?;
 
-        let provider = job_data.get("provider")
+        let provider = job_data
+            .get("provider")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing provider in job data"))?;
 
-        let prompt = job_data.get("prompt")
+        let prompt = job_data
+            .get("prompt")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing prompt in job data"))?;
 
-        let model = job_data.get("model")
+        let model = job_data
+            .get("model")
             .and_then(|v| v.as_str())
             .unwrap_or("default");
 
-        let parameters = job_data.get("parameters")
+        let parameters = job_data
+            .get("parameters")
             .cloned()
             .unwrap_or(serde_json::json!({}));
 
@@ -140,7 +146,8 @@ impl JobProcessor {
                 result: Some(serde_json::to_value(result)?),
                 error: None,
             },
-        ).await?;
+        )
+        .await?;
 
         Ok(())
     }

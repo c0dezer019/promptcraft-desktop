@@ -33,23 +33,32 @@ impl GoogleProvider {
     }
 
     /// Generate video using Veo via Gemini API
-    async fn generate_video(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_video(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Google API key not configured"))?;
 
         // Aspect ratio: 16:9 (default) or 9:16
-        let aspect_ratio = params.get("aspect_ratio")
+        let aspect_ratio = params
+            .get("aspect_ratio")
             .or_else(|| params.get("aspectRatio"))
             .and_then(|v| v.as_str())
             .unwrap_or("16:9");
 
         // Resolution: 720p (default) or 1080p
-        let resolution = params.get("resolution")
+        let resolution = params
+            .get("resolution")
             .and_then(|v| v.as_str())
             .unwrap_or("720p");
 
         // Duration in seconds: 4, 6, or 8
-        let duration_seconds = params.get("duration")
+        let duration_seconds = params
+            .get("duration")
             .or_else(|| params.get("durationSeconds"))
             .and_then(|v| v.as_u64())
             .unwrap_or(8)
@@ -68,7 +77,8 @@ impl GoogleProvider {
         });
 
         // Use the Gemini API endpoint for Veo
-        let model = params.get("model")
+        let model = params
+            .get("model")
             .and_then(|v| v.as_str())
             .unwrap_or("veo-3.1-generate-preview");
 
@@ -77,7 +87,8 @@ impl GoogleProvider {
             model
         );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .header("x-goog-api-key", &config.api_key)
             .header("Content-Type", "application/json")
@@ -89,14 +100,19 @@ impl GoogleProvider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("Google Veo API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "Google Veo API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
 
         // Veo returns a long-running operation
         // Extract the operation name for polling
-        let operation_name = response_data.get("name")
+        let operation_name = response_data
+            .get("name")
             .and_then(|n| n.as_str())
             .ok_or_else(|| anyhow::anyhow!("No operation name in Veo response"))?;
 
@@ -108,7 +124,9 @@ impl GoogleProvider {
 
     /// Poll for video generation completion
     async fn poll_video_generation(&self, operation_name: &str) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Google API key not configured"))?;
 
         let mut delay_ms = 10000u64; // Start with 10 seconds (video generation is slower)
@@ -124,7 +142,8 @@ impl GoogleProvider {
                 operation_name
             );
 
-            let response = self.client
+            let response = self
+                .client
                 .get(&url)
                 .header("x-goog-api-key", &config.api_key)
                 .send()
@@ -134,27 +153,34 @@ impl GoogleProvider {
 
             if !status.is_success() {
                 let error_text = response.text().await?;
-                return Err(anyhow::anyhow!("Google Veo poll error ({}): {}", status, error_text));
+                return Err(anyhow::anyhow!(
+                    "Google Veo poll error ({}): {}",
+                    status,
+                    error_text
+                ));
             }
 
             let response_data: serde_json::Value = response.json().await?;
 
             // Check if operation is done
-            let done = response_data.get("done")
+            let done = response_data
+                .get("done")
                 .and_then(|d| d.as_bool())
                 .unwrap_or(false);
 
             if done {
                 // Check for error
                 if let Some(error) = response_data.get("error") {
-                    let error_msg = error.get("message")
+                    let error_msg = error
+                        .get("message")
                         .and_then(|m| m.as_str())
                         .unwrap_or("Video generation failed");
                     return Err(anyhow::anyhow!("Veo generation failed: {}", error_msg));
                 }
 
                 // Extract the result
-                let result = response_data.get("response")
+                let result = response_data
+                    .get("response")
                     .or_else(|| response_data.get("result"));
 
                 // Try to find the video URL in various possible locations
@@ -186,7 +212,10 @@ impl GoogleProvider {
             }
         }
 
-        Err(anyhow::anyhow!("Video generation timed out after {} attempts", max_attempts))
+        Err(anyhow::anyhow!(
+            "Video generation timed out after {} attempts",
+            max_attempts
+        ))
     }
 }
 

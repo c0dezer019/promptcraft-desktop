@@ -33,23 +33,29 @@ impl OpenAIProvider {
     }
 
     /// Generate image using gpt-image-1
-    async fn generate_image(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("OpenAI API key not configured"))?;
 
         // Size options: 1024x1024, 1536x1024 (landscape), 1024x1536 (portrait), auto
-        let size = params.get("size")
+        let size = params
+            .get("size")
             .and_then(|v| v.as_str())
             .unwrap_or("auto");
 
         // Quality options: low, medium, high
-        let quality = params.get("quality")
+        let quality = params
+            .get("quality")
             .and_then(|v| v.as_str())
             .unwrap_or("high");
 
-        let n = params.get("n")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(1) as usize;
+        let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
 
         let request_body = serde_json::json!({
             "model": "gpt-image-1",
@@ -59,7 +65,8 @@ impl OpenAIProvider {
             "quality": quality,
         });
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post("https://api.openai.com/v1/images/generations")
             .header("Authorization", format!("Bearer {}", config.api_key))
             .header("Content-Type", "application/json")
@@ -74,7 +81,11 @@ impl OpenAIProvider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("OpenAI API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "OpenAI API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
@@ -102,22 +113,28 @@ impl OpenAIProvider {
     }
 
     /// Generate video using Sora
-    async fn generate_video(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_video(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("OpenAI API key not configured"))?;
 
         // Duration in seconds (typically 4, 5, 8, 10, or 12)
-        let duration = params.get("duration")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(5);
+        let duration = params.get("duration").and_then(|v| v.as_u64()).unwrap_or(5);
 
         // Resolution: 720p or 1080p
-        let resolution = params.get("resolution")
+        let resolution = params
+            .get("resolution")
             .and_then(|v| v.as_str())
             .unwrap_or("1080p");
 
         // Aspect ratio: 16:9 or 9:16
-        let aspect_ratio = params.get("aspect_ratio")
+        let aspect_ratio = params
+            .get("aspect_ratio")
             .and_then(|v| v.as_str())
             .unwrap_or("16:9");
 
@@ -129,7 +146,8 @@ impl OpenAIProvider {
             "aspect_ratio": aspect_ratio,
         });
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post("https://api.openai.com/v1/videos")
             .header("Authorization", format!("Bearer {}", config.api_key))
             .header("Content-Type", "application/json")
@@ -144,14 +162,19 @@ impl OpenAIProvider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("OpenAI Sora API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "OpenAI Sora API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
 
         // Sora returns an operation ID for async processing
         // We need to poll for the result
-        let operation_id = response_data.get("id")
+        let operation_id = response_data
+            .get("id")
             .and_then(|id| id.as_str())
             .ok_or_else(|| anyhow::anyhow!("No operation ID in Sora response"))?;
 
@@ -163,7 +186,9 @@ impl OpenAIProvider {
 
     /// Poll for video generation completion
     async fn poll_video_generation(&self, operation_id: &str) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("OpenAI API key not configured"))?;
 
         let mut delay_ms = 5000u64; // Start with 5 seconds
@@ -173,7 +198,8 @@ impl OpenAIProvider {
         for attempt in 0..max_attempts {
             tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
 
-            let mut request = self.client
+            let mut request = self
+                .client
                 .get(format!("https://api.openai.com/v1/videos/{}", operation_id))
                 .header("Authorization", format!("Bearer {}", config.api_key));
 
@@ -186,17 +212,23 @@ impl OpenAIProvider {
 
             if !status.is_success() {
                 let error_text = response.text().await?;
-                return Err(anyhow::anyhow!("OpenAI Sora poll error ({}): {}", status, error_text));
+                return Err(anyhow::anyhow!(
+                    "OpenAI Sora poll error ({}): {}",
+                    status,
+                    error_text
+                ));
             }
 
             let response_data: serde_json::Value = response.json().await?;
-            let gen_status = response_data.get("status")
+            let gen_status = response_data
+                .get("status")
                 .and_then(|s| s.as_str())
                 .unwrap_or("unknown");
 
             match gen_status {
                 "completed" | "succeeded" => {
-                    let output_url = response_data.get("output")
+                    let output_url = response_data
+                        .get("output")
                         .or_else(|| response_data.get("video_url"))
                         .or_else(|| response_data.get("result").and_then(|r| r.get("url")))
                         .and_then(|url| url.as_str())
@@ -209,7 +241,8 @@ impl OpenAIProvider {
                     });
                 }
                 "failed" | "error" => {
-                    let error_msg = response_data.get("error")
+                    let error_msg = response_data
+                        .get("error")
                         .and_then(|e| e.as_str())
                         .unwrap_or("Video generation failed");
                     return Err(anyhow::anyhow!("Sora generation failed: {}", error_msg));
@@ -225,7 +258,10 @@ impl OpenAIProvider {
             }
         }
 
-        Err(anyhow::anyhow!("Video generation timed out after {} attempts", max_attempts))
+        Err(anyhow::anyhow!(
+            "Video generation timed out after {} attempts",
+            max_attempts
+        ))
     }
 }
 

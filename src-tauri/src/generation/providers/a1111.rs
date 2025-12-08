@@ -32,41 +32,41 @@ impl A1111Provider {
     }
 
     /// Generate image using A1111 txt2img endpoint
-    async fn generate_image(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("A1111 API URL not configured"))?;
 
         // Extract parameters with defaults
-        let negative_prompt = params.get("negative_prompt")
+        let negative_prompt = params
+            .get("negative_prompt")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let steps = params.get("steps")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(20) as u32;
+        let steps = params.get("steps").and_then(|v| v.as_u64()).unwrap_or(20) as u32;
 
-        let cfg_scale = params.get("cfg_scale")
+        let cfg_scale = params
+            .get("cfg_scale")
             .and_then(|v| v.as_f64())
             .unwrap_or(7.0) as f32;
 
-        let width = params.get("width")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let width = params.get("width").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let height = params.get("height")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let height = params.get("height").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let sampler_name = params.get("sampler")
+        let sampler_name = params
+            .get("sampler")
             .and_then(|v| v.as_str())
             .unwrap_or("Euler a");
 
-        let seed = params.get("seed")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(-1) as i32;
+        let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
 
-        let model = params.get("model")
-            .and_then(|v| v.as_str());
+        let model = params.get("model").and_then(|v| v.as_str());
 
         // Build request body
         let mut request_body = serde_json::json!({
@@ -91,7 +91,8 @@ impl A1111Provider {
 
         // Send request to A1111 API
         let url = format!("{}/sdapi/v1/txt2img", config.api_url);
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -102,22 +103,29 @@ impl A1111Provider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("A1111 API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "A1111 API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
 
         // A1111 returns base64-encoded images in the "images" array
-        let images = response_data.get("images")
+        let images = response_data
+            .get("images")
             .and_then(|v| v.as_array())
             .ok_or_else(|| anyhow::anyhow!("No images in response"))?;
 
-        let first_image = images.first()
+        let first_image = images
+            .first()
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Invalid image data"))?;
 
         // Get generation info
-        let info = response_data.get("info")
+        let info = response_data
+            .get("info")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -153,7 +161,8 @@ impl GenerationProvider for A1111Provider {
     }
 
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult> {
-        self.generate_image(&request.prompt, &request.parameters).await
+        self.generate_image(&request.prompt, &request.parameters)
+            .await
     }
 
     fn config_schema(&self) -> serde_json::Value {

@@ -1,6 +1,6 @@
-pub mod openai;
 pub mod google;
 pub mod grok;
+pub mod openai;
 
 // Local generation providers
 pub mod a1111;

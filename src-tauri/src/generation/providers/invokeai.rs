@@ -32,40 +32,42 @@ impl InvokeAIProvider {
     }
 
     /// Generate image using InvokeAI txt2img endpoint
-    async fn generate_image(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("InvokeAI API URL not configured"))?;
 
         // Extract parameters
-        let negative_prompt = params.get("negative_prompt")
+        let negative_prompt = params
+            .get("negative_prompt")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let steps = params.get("steps")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(20) as u32;
+        let steps = params.get("steps").and_then(|v| v.as_u64()).unwrap_or(20) as u32;
 
-        let cfg_scale = params.get("cfg_scale")
+        let cfg_scale = params
+            .get("cfg_scale")
             .and_then(|v| v.as_f64())
             .unwrap_or(7.0) as f32;
 
-        let width = params.get("width")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let width = params.get("width").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let height = params.get("height")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let height = params.get("height").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let sampler = params.get("sampler")
+        let sampler = params
+            .get("sampler")
             .and_then(|v| v.as_str())
             .unwrap_or("euler");
 
-        let seed = params.get("seed")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(-1);
+        let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(-1);
 
-        let model = params.get("model")
+        let model = params
+            .get("model")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Model required for InvokeAI"))?;
 
@@ -84,7 +86,8 @@ impl InvokeAIProvider {
 
         // Send request to InvokeAI API
         let url = format!("{}/api/v1/generate", config.api_url);
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -95,18 +98,24 @@ impl InvokeAIProvider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("InvokeAI API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "InvokeAI API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
 
         // InvokeAI returns image info including URL or base64
-        let image_url = response_data.get("image")
+        let image_url = response_data
+            .get("image")
             .and_then(|v| v.get("url"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let image_data = response_data.get("image")
+        let image_data = response_data
+            .get("image")
             .and_then(|v| v.get("data"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
@@ -143,7 +152,8 @@ impl GenerationProvider for InvokeAIProvider {
     }
 
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult> {
-        self.generate_image(&request.prompt, &request.parameters).await
+        self.generate_image(&request.prompt, &request.parameters)
+            .await
     }
 
     fn config_schema(&self) -> serde_json::Value {

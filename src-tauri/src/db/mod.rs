@@ -43,9 +43,7 @@ impl Database {
             .execute(pool)
             .await?;
 
-        sqlx::query(schema::CREATE_JOBS_TABLE)
-            .execute(pool)
-            .await?;
+        sqlx::query(schema::CREATE_JOBS_TABLE).execute(pool).await?;
 
         Ok(())
     }

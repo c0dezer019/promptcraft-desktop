@@ -34,40 +34,42 @@ impl ComfyUIProvider {
     }
 
     /// Generate image using ComfyUI workflow
-    async fn generate_image(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("ComfyUI API URL not configured"))?;
 
         // Extract parameters
-        let negative_prompt = params.get("negative_prompt")
+        let negative_prompt = params
+            .get("negative_prompt")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let steps = params.get("steps")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(20) as u32;
+        let steps = params.get("steps").and_then(|v| v.as_u64()).unwrap_or(20) as u32;
 
-        let cfg_scale = params.get("cfg_scale")
+        let cfg_scale = params
+            .get("cfg_scale")
             .and_then(|v| v.as_f64())
             .unwrap_or(7.0) as f32;
 
-        let width = params.get("width")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let width = params.get("width").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let height = params.get("height")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(512) as u32;
+        let height = params.get("height").and_then(|v| v.as_u64()).unwrap_or(512) as u32;
 
-        let sampler = params.get("sampler")
+        let sampler = params
+            .get("sampler")
             .and_then(|v| v.as_str())
             .unwrap_or("euler");
 
-        let seed = params.get("seed")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(-1);
+        let seed = params.get("seed").and_then(|v| v.as_i64()).unwrap_or(-1);
 
-        let model = params.get("model")
+        let model = params
+            .get("model")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Model checkpoint required for ComfyUI"))?;
 
@@ -86,7 +88,8 @@ impl ComfyUIProvider {
 
         // Submit workflow to ComfyUI
         let prompt_url = format!("{}/prompt", config.api_url);
-        let response = self.client
+        let response = self
+            .client
             .post(&prompt_url)
             .header("Content-Type", "application/json")
             .json(&serde_json::json!({
@@ -98,18 +101,24 @@ impl ComfyUIProvider {
         let status = response.status();
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("ComfyUI API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "ComfyUI API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
-        let prompt_id = response_data.get("prompt_id")
+        let prompt_id = response_data
+            .get("prompt_id")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("No prompt_id in response"))?;
 
         // Poll for completion
         let output_images = self.poll_for_completion(config, prompt_id).await?;
 
-        let first_image = output_images.first()
+        let first_image = output_images
+            .first()
             .ok_or_else(|| anyhow::anyhow!("No images generated"))?;
 
         Ok(GenerationResult {
@@ -208,7 +217,11 @@ impl ComfyUIProvider {
     }
 
     /// Poll ComfyUI for workflow completion
-    async fn poll_for_completion(&self, config: &ComfyUIConfig, prompt_id: &str) -> Result<Vec<String>> {
+    async fn poll_for_completion(
+        &self,
+        config: &ComfyUIConfig,
+        prompt_id: &str,
+    ) -> Result<Vec<String>> {
         let history_url = format!("{}/history/{}", config.api_url, prompt_id);
         let max_attempts = 60; // 60 seconds max
         let mut attempts = 0;
@@ -221,10 +234,7 @@ impl ComfyUIProvider {
             sleep(Duration::from_secs(1)).await;
             attempts += 1;
 
-            let response = self.client
-                .get(&history_url)
-                .send()
-                .await?;
+            let response = self.client.get(&history_url).send().await?;
 
             if !response.status().is_success() {
                 continue;
@@ -273,7 +283,8 @@ impl GenerationProvider for ComfyUIProvider {
     }
 
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult> {
-        self.generate_image(&request.prompt, &request.parameters).await
+        self.generate_image(&request.prompt, &request.parameters)
+            .await
     }
 
     fn config_schema(&self) -> serde_json::Value {

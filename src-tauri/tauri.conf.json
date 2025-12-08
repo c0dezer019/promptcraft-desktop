@@ -28,7 +28,8 @@
             "core:path:default",
             "core:app:default"
           ]
-        }
+        },
+        "api-access"
       ]
     }
   },

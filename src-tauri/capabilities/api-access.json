@@ -1,0 +1,12 @@
+{
+  "identifier": "api-access",
+  "description": "Allow access to local AI backend",
+  "windows": ["main"],
+  "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": ["http://127.0.0.1:8188/*"],
+      "deny": []
+    }
+  ]
+}

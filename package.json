@@ -36,6 +36,7 @@
   "dependencies": {
     "@promptcraft/ui": "github:c0dezer019/promptcraft-ui#fix/update-models-and-dark-mode",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-http": "~2.5.4",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2",
     "@tauri-apps/plugin-sql": "^2",

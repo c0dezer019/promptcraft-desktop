@@ -3,6 +3,8 @@
  * Fetches available models from local generation tool APIs
  */
 
+import { fetch } from '@tauri-apps/plugin-http';
+
 /**
  * Discover models from ComfyUI
  * @param {Object} config - Tool configuration with apiUrl

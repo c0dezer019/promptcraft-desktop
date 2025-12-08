@@ -29,6 +29,8 @@ export const SettingsModal = ({ isOpen, onClose }) => {
         gemini: '',
         anthropic: '',
         openai: '',
+        minimax: '',
+        venice: ''
     });
     const [model, setModel] = useState('');
     const [baseUrl, setBaseUrl] = useState('');
@@ -39,6 +41,8 @@ export const SettingsModal = ({ isOpen, onClose }) => {
         openai: { enabled: false, apiKey: '' },
         google: { enabled: false, apiKey: '' },
         grok: { enabled: false, apiKey: '' },
+        minimax: { enabled: false, apiKey: '' },
+        venice: { enabled: false, apiKey: '' }
     });
     const [genSaved, setGenSaved] = useState(false);
 
@@ -52,11 +56,15 @@ export const SettingsModal = ({ isOpen, onClose }) => {
             const geminiSettings = loadAISettings('gemini');
             const anthropicSettings = loadAISettings('anthropic');
             const openaiSettings = loadAISettings('openai');
+            const miniMaxSettings = loadAISettings('minimax')
+            const veniceSettings = loadAISettings('venice')
 
             setEnhancementKeys({
                 gemini: geminiSettings.key || '',
                 anthropic: anthropicSettings.key || '',
                 openai: openaiSettings.key || '',
+                minimax: miniMaxSettings.key || '',
+                venice: veniceSettings.key || ''
             });
 
             setModel(settings.model || '');
@@ -70,6 +78,8 @@ export const SettingsModal = ({ isOpen, onClose }) => {
                 openai: genSettings.openai || { enabled: false, apiKey: '' },
                 google: genSettings.google || { enabled: false, apiKey: '' },
                 grok: genSettings.grok || { enabled: false, apiKey: '' },
+                minimax: genSettings.minimax || { enabled: false, apiKey: '' },
+                venice: genSettings.venice || { enabled: false, apiKey: '' }
             });
 
             // Set tab based on desktop mode
@@ -154,6 +164,11 @@ export const SettingsModal = ({ isOpen, onClose }) => {
             icon: Image,
             description: 'Image generation with Aurora (grok-2-image)',
         },
+        minimax: {
+            name: 'MiniMax',
+            icon: Video,
+            description: 'Image and video generation with Minimax Image 1.0 and Hailuo 2.3.'
+        }
     };
 
     return (
@@ -183,7 +198,7 @@ export const SettingsModal = ({ isOpen, onClose }) => {
                         }`}>
                         <div className="flex items-center justify-center gap-2">
                             <Sparkles size={16} />
-                            API Access
+                            Enhancement API
                         </div>
                     </button>
                     <button
@@ -239,7 +254,7 @@ export const SettingsModal = ({ isOpen, onClose }) => {
                                         Provider
                                     </label>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                        {['gemini', 'anthropic', 'openai'].map(
+                                        {['gemini', 'anthropic', 'openai', 'minimax', 'venice'].map(
                                             p => (
                                                 <button
                                                     key={p}

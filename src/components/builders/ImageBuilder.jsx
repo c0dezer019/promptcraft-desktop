@@ -5,7 +5,7 @@ import { SectionHeader } from '@promptcraft/ui/components/molecules/SectionHeade
 import { TagGroup } from '@promptcraft/ui/components/molecules/TagGroup.jsx';
 import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButton.jsx';
 import { SD_CATEGORIES } from '@promptcraft/ui/constants/tagCategories.js';
-import { callAI } from '@promptcraft/ui/utils/aiApi.js';
+import { callAI } from '../../utils/aiApi.js';
 import { useGeneration } from '@promptcraft/ui/hooks/useGeneration.js';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { useProviders } from '../../hooks/useProviders.js';

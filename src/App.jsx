@@ -72,8 +72,7 @@ export default function PromptCraft() {
     console.log('[PromptCraft] Platform Detection:', {
       platform,
       isDesktop,
-      isWeb,
-      hasTauri: typeof window !== 'undefined' && !!window.__TAURI__
+      isWeb
     });
   }, [platform, isDesktop, isWeb]);
 

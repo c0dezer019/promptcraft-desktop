@@ -8,6 +8,7 @@ import {
   getModelById,
   getModelTier
 } from '../constants/models.js';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Hook for managing AI generation providers
@@ -31,7 +32,6 @@ export function useProviders() {
     setError(null);
 
     try {
-      const { invoke } = window.__TAURI__.core;
       const providerList = await invoke('list_providers');
       setProviders(providerList);
     } catch (err) {

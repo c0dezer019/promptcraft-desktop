@@ -5,7 +5,7 @@ import { SectionHeader } from '@promptcraft/ui/components/molecules/SectionHeade
 import { TagGroup } from '@promptcraft/ui/components/molecules/TagGroup.jsx';
 import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButton.jsx';
 import { MIDJOURNEY_CATEGORIES } from '@promptcraft/ui/constants/tagCategories.js';
-import { callAI } from '@promptcraft/ui/utils/aiApi.js';
+import { callAI } from '../utils/aiApi.js';
 
 /**
  * MidjourneyBuilder Component - For Midjourney prompt crafting

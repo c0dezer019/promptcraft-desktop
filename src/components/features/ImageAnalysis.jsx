@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon, Sparkles, Loader2 } from 'lucide-react';
-import { callAI } from '@promptcraft/ui/utils/aiApi.js';
+import { callAI } from '../../utils/aiApi.js';
 
 /**
  * ImageAnalysis Component - Analyze images and generate prompts

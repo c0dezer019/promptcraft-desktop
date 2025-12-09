@@ -14,6 +14,7 @@ import { loadAISettings, saveAISettings } from '@promptcraft/ui/utils/aiApi.js';
 import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 import { HardDrive } from 'lucide-react';
 import LocalToolSetup from './features/LocalToolSetup';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * SettingsModal Component - AI Provider Configuration
@@ -89,7 +90,7 @@ export const SettingsModal = ({ isOpen, onClose }) => {
         }
     }, [isOpen, isDesktop]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // Save settings for the current provider with its specific key
         saveAISettings({
             provider,
@@ -97,6 +98,19 @@ export const SettingsModal = ({ isOpen, onClose }) => {
             model,
             baseUrl,
         });
+
+        // If in desktop mode and using Anthropic, configure it in the backend
+        if (isDesktop && provider === 'anthropic' && enhancementKeys[provider]) {
+            try {
+                await invoke('configure_provider', {
+                    provider: 'anthropic',
+                    apiKey: enhancementKeys[provider],
+                });
+            } catch (error) {
+                console.error('Failed to configure Anthropic provider:', error);
+            }
+        }
+
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     };
@@ -116,9 +130,8 @@ export const SettingsModal = ({ isOpen, onClose }) => {
         );
 
         // If in desktop mode, send to Tauri backend
-        if (isDesktop && window.__TAURI__) {
+        if (isDesktop) {
             try {
-                const { invoke } = window.__TAURI__.core;
                 // Configure each enabled provider
                 for (const [providerName, config] of Object.entries(
                     genProviders

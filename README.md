@@ -72,11 +72,35 @@ pnpm run tauri:build
 ### Development
 
 ```bash
-pnpm run dev          # Start frontend dev server only
-pnpm run tauri:dev    # Start full Tauri dev environment
+pnpm run dev          # Start frontend dev server only (web mode - limited features)
+pnpm run tauri:dev    # Start full Tauri dev environment (REQUIRED for AI features)
 pnpm run build        # Build frontend
 pnpm run tauri:build  # Build desktop application
 ```
+
+**⚠️ Important:** AI enhancement features (enhance button) require running in Tauri mode (`pnpm run tauri:dev`). Running `pnpm run dev` only starts the web frontend without the Rust backend, so AI features won't work.
+
+### Configuring AI Providers
+
+To use AI enhancement features (the enhance button):
+
+1. Run the app in Tauri mode: `pnpm run tauri:dev`
+2. Open Settings (gear icon)
+3. Go to the **Enhancement** tab
+4. Select your provider (e.g., Anthropic for Claude)
+5. Enter your API key
+6. Click Save
+
+**Supported Enhancement Providers:**
+- Anthropic (Claude) - Recommended for prompt enhancement
+- Google (Gemini)
+- OpenAI (GPT models)
+- MiniMax
+- Venice
+
+**Note:** The **Generation** tab is for image/video generation providers only (OpenAI, Google Veo, Grok). Text enhancement providers like Anthropic appear in the **Enhancement** tab.
+
+For more details on the Anthropic integration, see [ANTHROPIC_INTEGRATION.md](ANTHROPIC_INTEGRATION.md).
 
 ### Production Build
 

@@ -2,6 +2,8 @@ import React from 'react';
 import { Settings, Sun, Moon, ScanSearch, Palette, Grid3x3 } from 'lucide-react';
 import { TabBar } from './TabBar.jsx';
 import { ModelSelector } from './ModelSelector.jsx';
+import { LocalModelSelector } from './LocalModelSelector.jsx';
+import { GenerationModeToggle } from './GenerationModeToggle.jsx';
 
 /**
  * TopNav Component - Main top navigation bar
@@ -16,7 +18,11 @@ export const TopNav = ({
   darkMode,
   toggleDarkMode,
   openSettings,
-  onOpenSceneManager
+  onOpenSceneManager,
+  generationMode,
+  setGenerationMode,
+  selectedLocalModel,
+  setSelectedLocalModel
 }) => {
   return (
     <header className="h-16 border-b border-gray-200 dark:border-gray-700 fixed w-full top-0 z-30 bg-white dark:bg-gray-900 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
@@ -31,21 +37,32 @@ export const TopNav = ({
           </span>
         </div>
 
-        {/* Center: Tab Bar */}
+        {/* Center: Tab Bar + Generation Mode Toggle */}
         <div className="flex items-center gap-4">
           <TabBar
             activeCategory={activeCategory}
             onChange={setActiveCategory}
           />
+          <GenerationModeToggle
+            mode={generationMode}
+            onChange={setGenerationMode}
+          />
         </div>
 
         {/* Right: Model Selector + Actions */}
         <div className="flex items-center gap-2">
-          <ModelSelector
-            category={activeCategory}
-            value={selectedModel}
-            onChange={setSelectedModel}
-          />
+          {generationMode === 'cloud' ? (
+            <ModelSelector
+              category={activeCategory}
+              value={selectedModel}
+              onChange={setSelectedModel}
+            />
+          ) : (
+            <LocalModelSelector
+              value={selectedLocalModel}
+              onChange={setSelectedLocalModel}
+            />
+          )}
 
           {/* Scene Manager Button */}
           <button

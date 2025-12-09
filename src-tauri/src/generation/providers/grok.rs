@@ -32,18 +32,26 @@ impl GrokProvider {
     }
 
     /// Generate image using Grok Aurora (grok-2-image)
-    async fn generate_image(&self, prompt: &str, params: &serde_json::Value) -> Result<GenerationResult> {
-        let config = self.config.as_ref()
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("xAI API key not configured"))?;
 
         // Number of images to generate (1-10)
-        let n = params.get("n")
+        let n = params
+            .get("n")
             .and_then(|v| v.as_u64())
             .unwrap_or(1)
             .min(10) as usize;
 
         // Response format: url (default) or b64_json
-        let response_format = params.get("response_format")
+        let response_format = params
+            .get("response_format")
             .and_then(|v| v.as_str())
             .unwrap_or("url");
 
@@ -54,7 +62,8 @@ impl GrokProvider {
             "response_format": response_format
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.x.ai/v1/images/generations")
             .header("Authorization", format!("Bearer {}", config.api_key))
             .header("Content-Type", "application/json")
@@ -66,7 +75,11 @@ impl GrokProvider {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("xAI Grok API error ({}): {}", status, error_text));
+            return Err(anyhow::anyhow!(
+                "xAI Grok API error ({}): {}",
+                status,
+                error_text
+            ));
         }
 
         let response_data: serde_json::Value = response.json().await?;
@@ -108,12 +121,14 @@ impl GenerationProvider for GrokProvider {
         match request.model.as_str() {
             // Image generation models
             "grok-2-image" | "grok-2-image-1212" | "grok-image" | "aurora" => {
-                self.generate_image(&request.prompt, &request.parameters).await
+                self.generate_image(&request.prompt, &request.parameters)
+                    .await
             }
             // Legacy/alias support
             "grok-1" | "grok" | "flux" => {
                 eprintln!("Note: Using grok-2-image for Grok image generation");
-                self.generate_image(&request.prompt, &request.parameters).await
+                self.generate_image(&request.prompt, &request.parameters)
+                    .await
             }
             _ => Err(anyhow::anyhow!(
                 "Unsupported Grok model: {}. Use 'grok-2-image' for image generation.",

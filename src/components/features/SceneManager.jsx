@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Grid3x3, List, Filter, X, Plus, Image as ImageIcon, Video, Sparkles } from 'lucide-react';
-import { Button, Input } from '@promptcraft/ui';
+import { Button, Input } from '../../lib/promptcraft-ui';
 import { useScenes } from '../../hooks/useScenes';
 import { SceneCard } from './scenes/SceneCard';
 import { SceneDetailModal } from './scenes/SceneDetailModal';

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { usePlatform } from '@promptcraft/ui';
+import { usePlatform } from '../lib/promptcraft-ui';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Custom hook for managing scenes (generation history with metadata)
@@ -24,7 +25,6 @@ export function useScenes(workflowId = 'default') {
     setError(null);
 
     try {
-      const { invoke } = window.__TAURI__.core;
       const data = await invoke('list_scenes', { workflowId });
 
       // Parse JSON data field for each scene
@@ -54,7 +54,6 @@ export function useScenes(workflowId = 'default') {
     }
 
     try {
-      const { invoke } = window.__TAURI__.core;
       const scene = await invoke('create_scene', {
         input: {
           workflowId,
@@ -88,7 +87,6 @@ export function useScenes(workflowId = 'default') {
     }
 
     try {
-      const { invoke } = window.__TAURI__.core;
       await invoke('delete_scene', { id: sceneId });
 
       // Remove from state
@@ -109,7 +107,6 @@ export function useScenes(workflowId = 'default') {
     }
 
     try {
-      const { invoke } = window.__TAURI__.core;
       const jobs = await invoke('list_jobs', { workflowId });
 
       // Filter jobs that belong to this scene

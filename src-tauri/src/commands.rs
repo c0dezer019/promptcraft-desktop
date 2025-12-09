@@ -1,7 +1,9 @@
 use crate::db::{models::*, operations::*, Database};
 use crate::generation::GenerationService;
-use tauri::State;
+use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::Arc;
+use std::time::Duration;
+use tauri::State;
 use tokio::sync::RwLock;
 
 /// Workflow Commands
@@ -24,7 +26,9 @@ pub async fn get_workflow(db: State<'_, Database>, id: String) -> Result<Option<
 
 #[tauri::command]
 pub async fn list_workflows(db: State<'_, Database>) -> Result<Vec<Workflow>, String> {
-    WorkflowOps::list(db.pool()).await.map_err(|e| e.to_string())
+    WorkflowOps::list(db.pool())
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -83,9 +87,7 @@ pub async fn create_job(db: State<'_, Database>, input: CreateJobInput) -> Resul
 
 #[tauri::command]
 pub async fn get_job(db: State<'_, Database>, id: String) -> Result<Option<Job>, String> {
-    JobOps::get(db.pool(), &id)
-        .await
-        .map_err(|e| e.to_string())
+    JobOps::get(db.pool(), &id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -165,7 +167,8 @@ pub async fn configure_provider(
     api_key: String,
 ) -> Result<(), String> {
     let mut service = service.write().await;
-    service.configure_provider(&provider, api_key)
+    service
+        .configure_provider(&provider, api_key)
         .map_err(|e| e.to_string())
 }
 
@@ -175,4 +178,67 @@ pub async fn list_providers(
 ) -> Result<Vec<String>, String> {
     let service = service.read().await;
     Ok(service.list_providers())
+}
+
+#[tauri::command]
+pub async fn configure_local_provider(
+    service: State<'_, Arc<RwLock<GenerationService>>>,
+    provider: String,
+    api_url: String,
+) -> Result<(), String> {
+    let mut service = service.write().await;
+    service
+        .configure_local_provider(&provider, api_url)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn check_port(address: String) -> bool {
+    let timeout = Duration::from_secs(1);
+
+    if let Ok(iter) = address.to_socket_addrs() {
+        for addr in iter {
+            if TcpStream::connect_timeout(&addr, timeout).is_ok() {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Call AI for text generation (used by enhance feature)
+#[tauri::command]
+pub async fn call_ai(
+    service: State<'_, Arc<RwLock<GenerationService>>>,
+    provider: String,
+    model: String,
+    prompt: String,
+    max_tokens: Option<u32>,
+    temperature: Option<f64>,
+) -> Result<String, String> {
+    use crate::generation::GenerationRequest;
+
+    let service = service.read().await;
+
+    let params = serde_json::json!({
+        "max_tokens": max_tokens.unwrap_or(4096),
+        "temperature": temperature.unwrap_or(1.0),
+    });
+
+    let request = GenerationRequest {
+        prompt,
+        model,
+        parameters: params,
+    };
+
+    let result = service
+        .generate(&provider, request)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // For text generation, the result is in output_data
+    result
+        .output_data
+        .ok_or_else(|| "No text output received".to_string())
 }

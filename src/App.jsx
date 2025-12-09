@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { usePromptManager } from '@promptcraft/ui/hooks/usePromptManager.js';
-import { useHistory } from '@promptcraft/ui/hooks/useHistory.js';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
-import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from '@promptcraft/ui/utils/exportHelper.js';
+import { usePromptManager } from './lib/promptcraft-ui/hooks/usePromptManager.js';
+import { useHistory } from './lib/promptcraft-ui/hooks/useHistory.js';
+import { usePlatform } from './lib/promptcraft-ui/hooks/usePlatform.js';
+import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from './lib/promptcraft-ui/utils/exportHelper.js';
 
 // Navigation components
 import { TopNav } from './components/navigation/TopNav.jsx';
@@ -10,14 +10,20 @@ import { TopNav } from './components/navigation/TopNav.jsx';
 // Builder components
 import { ImageBuilder } from './components/builders/ImageBuilder.jsx';
 import { VideoBuilder } from './components/VideoBuilder.jsx';
+import { LocalImageBuilder } from './components/builders/LocalImageBuilder.jsx';
 
 // Feature components
 import { ImageAnalysis } from './components/features/ImageAnalysis.jsx';
 import { SettingsModal } from './components/SettingsModal.jsx';
 import { SceneManager } from './components/features/SceneManager.jsx';
+import { LocalEmptyState } from './components/features/LocalEmptyState.jsx';
+import { LocalToolSetup } from './components/features/LocalToolSetup.jsx';
 
 // Constants
 import { DEFAULT_MODELS } from './constants/models.js';
+
+// Utilities
+import { hasAnyConfiguredTool } from './utils/localToolConfig.js';
 
 /**
  * Main PromptCraft Application
@@ -31,11 +37,22 @@ export default function PromptCraft() {
     video: DEFAULT_MODELS.video
   });
 
+  // Local model state
+  const [selectedLocalModel, setSelectedLocalModel] = useState(() => {
+    return localStorage.getItem('selected_local_model') || null;
+  });
+
   // UI state
   const [darkMode, setDarkMode] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showImageAnalysis, setShowImageAnalysis] = useState(false);
   const [showSceneManager, setShowSceneManager] = useState(false);
+
+  // Generation mode state (cloud vs local)
+  const [generationMode, setGenerationMode] = useState(() => {
+    return localStorage.getItem('generation_mode') || 'cloud';
+  });
+  const [showLocalToolSetup, setShowLocalToolSetup] = useState(false);
 
   // Custom Hooks
   const {
@@ -55,8 +72,7 @@ export default function PromptCraft() {
     console.log('[PromptCraft] Platform Detection:', {
       platform,
       isDesktop,
-      isWeb,
-      hasTauri: typeof window !== 'undefined' && !!window.__TAURI__
+      isWeb
     });
   }, [platform, isDesktop, isWeb]);
 
@@ -68,6 +84,18 @@ export default function PromptCraft() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Save generation mode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('generation_mode', generationMode);
+  }, [generationMode]);
+
+  // Save selected local model to localStorage when it changes
+  useEffect(() => {
+    if (selectedLocalModel) {
+      localStorage.setItem('selected_local_model', selectedLocalModel);
+    }
+  }, [selectedLocalModel]);
 
   // Get current model for active category
   const currentModel = selectedModel[activeCategory];
@@ -207,6 +235,10 @@ export default function PromptCraft() {
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
         openSettings={() => setShowSettings(true)}
+        generationMode={generationMode}
+        setGenerationMode={setGenerationMode}
+        selectedLocalModel={selectedLocalModel}
+        setSelectedLocalModel={setSelectedLocalModel}
       />
 
       {/* Scene Manager */}
@@ -217,40 +249,63 @@ export default function PromptCraft() {
         />
       )}
 
+      {/* Local Tool Setup Modal */}
+      <LocalToolSetup
+        isOpen={showLocalToolSetup}
+        onClose={() => setShowLocalToolSetup(false)}
+      />
+
       {/* Main Content */}
       <main className="pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
-        {/* Category: Image */}
-        {activeCategory === 'image' && (
-          <ImageBuilder
-            model={currentModel}
-            prompt={currentPromptData.main || ''}
-            setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
-            modifiers={currentPromptData.modifiers || []}
-            setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
-            negativePrompt={currentPromptData.negative || ''}
-            setNegativePrompt={(val) => updatePrompt(promptKey, 'negative', val)}
-            nodes={currentPromptData.nodes || []}
-            setNodes={(val) => updatePrompt(promptKey, 'nodes', val)}
-            params={currentPromptData.params || {}}
-            setParams={(val) => updatePrompt(promptKey, 'params', val)}
-            deleteEnhancer={deleteEnhancer}
-            editEnhancer={editEnhancer}
-            syncEnhancer={syncEnhancerAcrossBuilders}
-          />
-        )}
+        {generationMode === 'cloud' ? (
+          <>
+            {/* Category: Image */}
+            {activeCategory === 'image' && (
+              <ImageBuilder
+                model={currentModel}
+                prompt={currentPromptData.main || ''}
+                setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
+                modifiers={currentPromptData.modifiers || []}
+                setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
+                negativePrompt={currentPromptData.negative || ''}
+                setNegativePrompt={(val) => updatePrompt(promptKey, 'negative', val)}
+                nodes={currentPromptData.nodes || []}
+                setNodes={(val) => updatePrompt(promptKey, 'nodes', val)}
+                params={currentPromptData.params || {}}
+                setParams={(val) => updatePrompt(promptKey, 'params', val)}
+                deleteEnhancer={deleteEnhancer}
+                editEnhancer={editEnhancer}
+                syncEnhancer={syncEnhancerAcrossBuilders}
+              />
+            )}
 
-        {/* Category: Video */}
-        {activeCategory === 'video' && (
-          <VideoBuilder
-            model={currentModel}
-            prompt={currentPromptData.main || ''}
-            setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
-            modifiers={currentPromptData.modifiers || []}
-            setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
-            deleteEnhancer={deleteEnhancer}
-            editEnhancer={editEnhancer}
-            syncEnhancer={syncEnhancerAcrossBuilders}
-          />
+            {/* Category: Video */}
+            {activeCategory === 'video' && (
+              <VideoBuilder
+                model={currentModel}
+                prompt={currentPromptData.main || ''}
+                setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
+                modifiers={currentPromptData.modifiers || []}
+                setModifiers={(val) => updatePrompt(promptKey, 'modifiers', val)}
+                deleteEnhancer={deleteEnhancer}
+                editEnhancer={editEnhancer}
+                syncEnhancer={syncEnhancerAcrossBuilders}
+              />
+            )}
+          </>
+        ) : (
+          /* Local Generation Mode */
+          hasAnyConfiguredTool() ? (
+            <LocalImageBuilder
+              selectedModel={selectedLocalModel}
+              prompt={currentPromptData.main || ''}
+              setPrompt={(val) => updatePrompt('local', 'main', val)}
+              negativePrompt={currentPromptData.negative || ''}
+              setNegativePrompt={(val) => updatePrompt('local', 'negative', val)}
+            />
+          ) : (
+            <LocalEmptyState onConfigure={() => setShowLocalToolSetup(true)} />
+          )
         )}
       </main>
 

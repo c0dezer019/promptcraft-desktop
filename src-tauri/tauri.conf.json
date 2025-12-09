@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "PromptCraft Desktop",
@@ -28,7 +29,8 @@
             "core:path:default",
             "core:app:default"
           ]
-        }
+        },
+        "api-access"
       ]
     }
   },

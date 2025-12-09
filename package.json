@@ -34,8 +34,9 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@promptcraft/ui": "github:c0dezer019/promptcraft-ui#fix/update-models-and-dark-mode",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-http": "~2.5.4",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2",
     "@tauri-apps/plugin-sql": "^2",
@@ -49,7 +50,11 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.5.6",
+    "prettier": "^3.7.4",
+    "prettier-eslint": "^16.4.2",
     "tailwindcss": "^3.4.15",
     "vite": "^5.4.11"
   }

@@ -6,18 +6,19 @@ use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::RwLock;
 
-use generation::{GenerationService, processor::JobProcessor};
 use generation::providers::{
+    anthropic::AnthropicProvider, google::GoogleProvider, grok::GrokProvider,
     openai::OpenAIProvider,
-    google::GoogleProvider,
-    grok::GrokProvider,
 };
+use generation::{processor::JobProcessor, GenerationService};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             // Initialize database and generation service synchronously in setup
@@ -64,6 +65,9 @@ pub fn run() {
             commands::submit_generation,
             commands::configure_provider,
             commands::list_providers,
+            commands::configure_local_provider,
+            commands::check_port,
+            commands::call_ai
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -108,6 +112,7 @@ fn init_generation_service() -> GenerationService {
     let mut service = GenerationService::new();
 
     // Register providers (they'll check for API keys at runtime)
+    service.register_provider(Box::new(AnthropicProvider::new()));
     service.register_provider(Box::new(OpenAIProvider::new()));
     service.register_provider(Box::new(GoogleProvider::new()));
     service.register_provider(Box::new(GrokProvider::new()));

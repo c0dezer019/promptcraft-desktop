@@ -41,11 +41,10 @@ impl WorkflowOps {
     }
 
     pub async fn list(pool: &SqlitePool) -> Result<Vec<Workflow>> {
-        let workflows = sqlx::query_as::<_, Workflow>(
-            "SELECT * FROM workflows ORDER BY updated_at DESC",
-        )
-        .fetch_all(pool)
-        .await?;
+        let workflows =
+            sqlx::query_as::<_, Workflow>("SELECT * FROM workflows ORDER BY updated_at DESC")
+                .fetch_all(pool)
+                .await?;
 
         Ok(workflows)
     }
@@ -245,7 +244,11 @@ impl JobOps {
 pub struct VersionOps;
 
 impl VersionOps {
-    pub async fn create(pool: &SqlitePool, workflow_id: &str, data: serde_json::Value) -> Result<WorkflowVersion> {
+    pub async fn create(
+        pool: &SqlitePool,
+        workflow_id: &str,
+        data: serde_json::Value,
+    ) -> Result<WorkflowVersion> {
         let now = now();
         let data_str = serde_json::to_string(&data)?;
 
@@ -274,7 +277,10 @@ impl VersionOps {
         Ok(workflow_version)
     }
 
-    pub async fn list_by_workflow(pool: &SqlitePool, workflow_id: &str) -> Result<Vec<WorkflowVersion>> {
+    pub async fn list_by_workflow(
+        pool: &SqlitePool,
+        workflow_id: &str,
+    ) -> Result<Vec<WorkflowVersion>> {
         let versions = sqlx::query_as::<_, WorkflowVersion>(
             "SELECT * FROM workflow_versions WHERE workflow_id = ? ORDER BY version DESC",
         )

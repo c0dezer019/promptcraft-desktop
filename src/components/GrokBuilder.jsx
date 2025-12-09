@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Terminal, Sparkles, Loader2, Plus, Check, X, Zap, Download } from 'lucide-react';
-import { TextArea } from '@promptcraft/ui/components/atoms/Input.jsx';
-import { SectionHeader } from '@promptcraft/ui/components/molecules/SectionHeader.jsx';
-import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButton.jsx';
-import { GROK_HELPER_BADGES } from '@promptcraft/ui/constants/tagCategories.js';
-import { callAI } from '@promptcraft/ui/utils/aiApi.js';
-import { useGeneration } from '@promptcraft/ui/hooks/useGeneration.js';
+import { TextArea } from '../lib/promptcraft-ui/components/atoms/Input.jsx';
+import { SectionHeader } from '../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
+import { EnhanceButton } from '../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
+import { GROK_HELPER_BADGES } from '../lib/promptcraft-ui/constants/tagCategories.js';
+import { callAI } from '../utils/aiApi.js';
+import { useGeneration } from '../lib/promptcraft-ui/hooks/useGeneration.js';
 import { useProviders } from '../hooks/useProviders.js';
 import { CheckCircle2, XCircle } from 'lucide-react';
 

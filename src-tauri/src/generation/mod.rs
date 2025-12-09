@@ -2,8 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-pub mod providers;
 pub mod processor;
+pub mod providers;
 
 /// Generation request parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,17 +83,23 @@ impl GenerationService {
         self.providers.remove(provider_name);
 
         match provider_name {
+            "anthropic" => {
+                let provider = anthropic::AnthropicProvider::with_config(anthropic::AnthropicConfig {
+                    api_key,
+                });
+                self.register_provider(Box::new(provider));
+            }
             "openai" => {
                 let provider = openai::OpenAIProvider::with_config(openai::OpenAIConfig {
                     api_key,
-                    organization: None
+                    organization: None,
                 });
                 self.register_provider(Box::new(provider));
             }
             "google" => {
                 let provider = google::GoogleProvider::with_config(google::GoogleConfig {
                     api_key,
-                    project_id: None
+                    project_id: None,
                 });
                 self.register_provider(Box::new(provider));
             }
@@ -102,6 +108,34 @@ impl GenerationService {
                 self.register_provider(Box::new(provider));
             }
             _ => return Err(anyhow::anyhow!("Unknown provider: {}", provider_name)),
+        }
+
+        Ok(())
+    }
+
+    /// Configure a local provider with an API URL
+    pub fn configure_local_provider(&mut self, provider_name: &str, api_url: String) -> Result<()> {
+        use providers::*;
+
+        // Remove old provider and register new one with config
+        self.providers.remove(provider_name);
+
+        match provider_name {
+            "a1111" => {
+                let provider = a1111::A1111Provider::with_config(a1111::A1111Config { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            "comfyui" => {
+                let provider =
+                    comfyui::ComfyUIProvider::with_config(comfyui::ComfyUIConfig { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            "invokeai" => {
+                let provider =
+                    invokeai::InvokeAIProvider::with_config(invokeai::InvokeAIConfig { api_url });
+                self.register_provider(Box::new(provider));
+            }
+            _ => return Err(anyhow::anyhow!("Unknown local provider: {}", provider_name)),
         }
 
         Ok(())

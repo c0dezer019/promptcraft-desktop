@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Image, Sparkles, MinusCircle, Loader2, CheckCircle2, XCircle, Zap, Download } from 'lucide-react';
-import { TextArea, Select } from '@promptcraft/ui/components/atoms/Input.jsx';
-import { SectionHeader } from '@promptcraft/ui/components/molecules/SectionHeader.jsx';
-import { TagGroup } from '@promptcraft/ui/components/molecules/TagGroup.jsx';
-import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButton.jsx';
-import { SD_CATEGORIES } from '@promptcraft/ui/constants/tagCategories.js';
-import { callAI } from '@promptcraft/ui/utils/aiApi.js';
-import { useGeneration } from '@promptcraft/ui/hooks/useGeneration.js';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
+import { TextArea, Select } from '../../lib/promptcraft-ui/components/atoms/Input.jsx';
+import { SectionHeader } from '../../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
+import { TagGroup } from '../../lib/promptcraft-ui/components/molecules/TagGroup.jsx';
+import { EnhanceButton } from '../../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
+import { SD_CATEGORIES } from '../../lib/promptcraft-ui/constants/tagCategories.js';
+import { callAI } from '../../utils/aiApi.js';
+import { useGeneration } from '../../lib/promptcraft-ui/hooks/useGeneration.js';
+import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform.js';
 import { useProviders } from '../../hooks/useProviders.js';
 import { getModelById, getModelProvider } from '../../constants/models.js';
 

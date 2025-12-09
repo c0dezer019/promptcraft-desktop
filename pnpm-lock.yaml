@@ -10,10 +10,13 @@ importers:
     dependencies:
       '@promptcraft/ui':
         specifier: github:c0dezer019/promptcraft-ui#fix/update-models-and-dark-mode
-        version: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/71148500206b8418cfa5a9d333fb86d08838d782(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tauri-apps/api':
         specifier: ^2
         version: 2.9.1
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.4.2
+        version: 2.4.2
       '@tauri-apps/plugin-http':
         specifier: ~2.5.4
         version: 2.5.4
@@ -403,8 +406,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/71148500206b8418cfa5a9d333fb86d08838d782':
-    resolution: {tarball: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/71148500206b8418cfa5a9d333fb86d08838d782}
+  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9':
+    resolution: {tarball: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9}
     version: 0.1.0
     peerDependencies:
       lucide-react: ^0.462.0
@@ -601,6 +604,9 @@ packages:
     engines: {node: '>= 10'}
     hasBin: true
 
+  '@tauri-apps/plugin-dialog@2.4.2':
+    resolution: {integrity: sha512-lNIn5CZuw8WZOn8zHzmFmDSzg5zfohWoa3mdULP0YFh/VogVdMVWZPcWSHlydsiJhRQYaTNSYKN7RmZKE2lCYQ==}
+
   '@tauri-apps/plugin-http@2.5.4':
     resolution: {integrity: sha512-/i4U/9za3mrytTgfRn5RHneKubZE/dwRmshYwyMvNRlkWjvu1m4Ma72kcbVJMZFGXpkbl+qLyWMGrihtWB76Zg==}
 
@@ -612,6 +618,9 @@ packages:
 
   '@tauri-apps/plugin-sql@2.3.1':
     resolution: {integrity: sha512-iNgHnFIR+jRkx9INKVKepzMlxXtNkJUaWuhagFjT4dOttPaNyRnVHgwTjpqZhyVjiklDh2UdEPAJkQKiCPAekw==}
+
+  '@tauri-apps/plugin-store@2.4.1':
+    resolution: {integrity: sha512-ckGSEzZ5Ii4Hf2D5x25Oqnm2Zf9MfDWAzR+volY0z/OOBz6aucPKEY0F649JvQ0Vupku6UJo7ugpGRDOFOunkA==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1878,11 +1887,14 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.19.1
 
-  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/71148500206b8418cfa5a9d333fb86d08838d782(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       lucide-react: 0.462.0(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@tauri-apps/api': 2.9.1
+      '@tauri-apps/plugin-store': 2.4.1
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
@@ -2003,6 +2015,10 @@ snapshots:
       '@tauri-apps/cli-win32-ia32-msvc': 2.9.5
       '@tauri-apps/cli-win32-x64-msvc': 2.9.5
 
+  '@tauri-apps/plugin-dialog@2.4.2':
+    dependencies:
+      '@tauri-apps/api': 2.9.1
+
   '@tauri-apps/plugin-http@2.5.4':
     dependencies:
       '@tauri-apps/api': 2.9.1
@@ -2018,6 +2034,11 @@ snapshots:
   '@tauri-apps/plugin-sql@2.3.1':
     dependencies:
       '@tauri-apps/api': 2.9.1
+
+  '@tauri-apps/plugin-store@2.4.1':
+    dependencies:
+      '@tauri-apps/api': 2.9.1
+    optional: true
 
   '@types/babel__core@7.20.5':
     dependencies:

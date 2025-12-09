@@ -45,6 +45,7 @@ export default function PromptCraft() {
   // UI state
   const [darkMode, setDarkMode] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState(null);
   const [showImageAnalysis, setShowImageAnalysis] = useState(false);
   const [showSceneManager, setShowSceneManager] = useState(false);
 
@@ -215,7 +216,14 @@ export default function PromptCraft() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Settings Modal */}
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => {
+          setShowSettings(false);
+          setSettingsInitialTab(null);
+        }}
+        initialTab={settingsInitialTab}
+      />
 
       {/* Image Analysis Modal */}
       <ImageAnalysis
@@ -276,6 +284,10 @@ export default function PromptCraft() {
                 deleteEnhancer={deleteEnhancer}
                 editEnhancer={editEnhancer}
                 syncEnhancer={syncEnhancerAcrossBuilders}
+                onOpenSettings={() => {
+                  setSettingsInitialTab('enhancement');
+                  setShowSettings(true);
+                }}
               />
             )}
 
@@ -290,6 +302,10 @@ export default function PromptCraft() {
                 deleteEnhancer={deleteEnhancer}
                 editEnhancer={editEnhancer}
                 syncEnhancer={syncEnhancerAcrossBuilders}
+                onOpenSettings={() => {
+                  setSettingsInitialTab('enhancement');
+                  setShowSettings(true);
+                }}
               />
             )}
           </>

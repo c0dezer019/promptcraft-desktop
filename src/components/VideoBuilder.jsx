@@ -11,6 +11,7 @@ import { usePlatform } from '../lib/promptcraft-ui/hooks/usePlatform.js';
 import { useProviders } from '../hooks/useProviders.js';
 import { getModelById, getModelProvider } from '../constants/models.js';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { EnhancementErrorModal } from './EnhancementErrorModal.jsx';
 
 /**
  * VideoBuilder Component - For Sora / Veo video generation
@@ -25,6 +26,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
  * @param {function} editEnhancer - Function to edit an enhancer
  * @param {function} syncEnhancer - Function to sync enhancer across builders
  * @param {string} workflowId - Current workflow ID (optional, for generation)
+ * @param {function} onOpenSettings - Function to open settings modal
  */
 export const VideoBuilder = ({
   model,
@@ -35,7 +37,8 @@ export const VideoBuilder = ({
   deleteEnhancer,
   editEnhancer,
   syncEnhancer,
-  workflowId = 'default'
+  workflowId = 'default',
+  onOpenSettings
 }) => {
   // Derive provider from model
   const modelConfig = getModelById(model);
@@ -44,6 +47,8 @@ export const VideoBuilder = ({
 
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [categories, setCategories] = useState(VIDEO_CATEGORIES);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [enhancementError, setEnhancementError] = useState('');
 
   // Video generation parameters
   const [duration, setDuration] = useState('5');
@@ -58,6 +63,7 @@ export const VideoBuilder = ({
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
+    setLocalError(null);
 
     // Get enhance prompt based on provider
     let systemPrompt;
@@ -81,9 +87,16 @@ export const VideoBuilder = ({
         systemPrompt = "You are an expert video prompt engineer. Transform the user's concept into a detailed, cinematic video description. Focus on visual quality, motion, and atmosphere. Keep it under 100 words. Return ONLY the prompt.";
     }
 
-    const result = await callAI(prompt, systemPrompt);
-    setPrompt(result);
-    setIsEnhancing(false);
+    try {
+      const result = await callAI(prompt, systemPrompt);
+      setPrompt(result);
+    } catch (error) {
+      setEnhancementError(error.message || error.toString());
+      setShowErrorModal(true);
+      console.error('Enhancement error:', error);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const addModifier = (tag) => {
@@ -319,6 +332,14 @@ export const VideoBuilder = ({
           </div>
         </div>
       )}
+
+      {/* Enhancement Error Modal */}
+      <EnhancementErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onOpenSettings={onOpenSettings || (() => {})}
+        error={enhancementError}
+      />
     </div>
   );
 };

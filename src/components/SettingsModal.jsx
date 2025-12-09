@@ -19,13 +19,16 @@ import { invoke } from '@tauri-apps/api/core';
 /**
  * SettingsModal Component - AI Provider Configuration
  * LOCAL OVERRIDE: Removed Midjourney from generation providers
+ * @param {boolean} isOpen - Whether modal is open
+ * @param {function} onClose - Close handler
+ * @param {string} initialTab - Initial tab to show (optional)
  */
-export const SettingsModal = ({ isOpen, onClose }) => {
+export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
     const { isDesktop } = usePlatform();
     const [activeTab, setActiveTab] = useState('enhancement');
 
     // Enhancement settings (existing)
-    const [provider, setProvider] = useState('gemini');
+    const [provider, setProvider] = useState('openai');
     const [enhancementKeys, setEnhancementKeys] = useState({
         gemini: '',
         anthropic: '',
@@ -51,7 +54,7 @@ export const SettingsModal = ({ isOpen, onClose }) => {
         if (isOpen) {
             // Load enhancement settings
             const settings = loadAISettings();
-            setProvider(settings.provider || 'gemini');
+            setProvider(settings.provider || 'openai');
 
             // Load keys for all enhancement providers
             const geminiSettings = loadAISettings('gemini');
@@ -83,12 +86,16 @@ export const SettingsModal = ({ isOpen, onClose }) => {
                 venice: genSettings.venice || { enabled: false, apiKey: '' }
             });
 
-            // Set tab based on desktop mode
-            if (isDesktop) {
+            // Set tab based on initialTab prop, or default based on desktop mode
+            if (initialTab) {
+                setActiveTab(initialTab);
+            } else if (isDesktop) {
                 setActiveTab('generation');
+            } else {
+                setActiveTab('enhancement');
             }
         }
-    }, [isOpen, isDesktop]);
+    }, [isOpen, isDesktop, initialTab]);
 
     const handleSave = async () => {
         // Save settings for the current provider with its specific key

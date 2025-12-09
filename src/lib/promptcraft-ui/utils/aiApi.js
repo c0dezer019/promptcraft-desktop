@@ -8,7 +8,7 @@ import { getItem, setItem } from './storage.js';
  */
 export const callAI = async (userQuery, systemInstruction) => {
   // 1. Load Settings
-  let settings = await getItem('promptcraft_ai_settings', { provider: 'gemini', key: '', model: '', baseUrl: '' });
+  let settings = await getItem('promptcraft_ai_settings', { provider: 'openai', key: '', model: '', baseUrl: '' });
 
   // Fallback for legacy key if no new settings
   if (!settings.key) {
@@ -17,11 +17,13 @@ export const callAI = async (userQuery, systemInstruction) => {
   }
 
   if (!settings.key && settings.provider !== 'custom') {
-    return "Error: No API Key found. Please configure your AI Provider in Settings.";
+    throw new Error(`No API key configured for ${settings.provider}. Please configure it in Settings → Enhancement tab.`);
   }
 
   try {
     let responseText = "";
+    let response;
+    let statusCode;
 
     switch (settings.provider) {
       case 'gemini':
@@ -34,7 +36,12 @@ export const callAI = async (userQuery, systemInstruction) => {
             systemInstruction: { parts: [{ text: systemInstruction }] }
           })
         });
-        if (!geminiRes.ok) throw new Error((await geminiRes.json()).error?.message || geminiRes.statusText);
+        statusCode = geminiRes.status;
+        if (!geminiRes.ok) {
+          const errorData = await geminiRes.json();
+          const errorMsg = errorData.error?.message || geminiRes.statusText;
+          throw new Error(`${statusCode === 403 ? 'Access denied' : statusCode === 401 ? 'Authentication failed' : 'Error'}: ${errorMsg}`);
+        }
         const geminiData = await geminiRes.json();
         responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
         break;
@@ -55,9 +62,11 @@ export const callAI = async (userQuery, systemInstruction) => {
             ]
           })
         });
+        statusCode = openAiRes.status;
         if (!openAiRes.ok) {
           const err = await openAiRes.json();
-          throw new Error(err.error?.message || `OpenAI Error: ${openAiRes.status}`);
+          const errorMsg = err.error?.message || `OpenAI Error: ${statusCode}`;
+          throw new Error(`${statusCode === 403 ? 'Access denied' : statusCode === 401 ? 'Authentication failed' : 'Error'}: ${errorMsg}`);
         }
         const openAiData = await openAiRes.json();
         responseText = openAiData.choices?.[0]?.message?.content;
@@ -79,22 +88,52 @@ export const callAI = async (userQuery, systemInstruction) => {
             max_tokens: 1024
           })
         });
+        statusCode = anthropicRes.status;
         if (!anthropicRes.ok) {
           const err = await anthropicRes.json();
-          throw new Error(err.error?.message || `Anthropic Error: ${anthropicRes.status}`);
+          const errorMsg = err.error?.message || `Anthropic Error: ${statusCode}`;
+          throw new Error(`${statusCode === 403 ? 'Access denied' : statusCode === 401 ? 'Authentication failed' : 'Error'}: ${errorMsg}`);
         }
         const anthropicData = await anthropicRes.json();
         responseText = anthropicData.content?.[0]?.text;
         break;
 
       default:
-        return "Error: Unknown provider selected.";
+        throw new Error("Unknown provider selected.");
     }
 
-    return responseText || "Error: No content generated.";
+    if (!responseText) {
+      throw new Error("No content generated.");
+    }
+
+    return responseText;
 
   } catch (error) {
-    return `Error: ${error.message}`;
+    // Enhanced error messages based on error type
+    const errorMsg = error.message.toLowerCase();
+    const provider = settings.provider;
+
+    // Authentication errors
+    if (errorMsg.includes('401') || errorMsg.includes('unauthorized') ||
+        errorMsg.includes('invalid') || errorMsg.includes('authentication failed')) {
+      throw new Error(`Authentication failed: Invalid API key for ${provider}. Please check your API key in Settings.`);
+    }
+
+    // Permission/quota errors
+    if (errorMsg.includes('403') || errorMsg.includes('forbidden') ||
+        errorMsg.includes('access denied') || errorMsg.includes('quota') ||
+        errorMsg.includes('rate limit')) {
+      throw new Error(`Access denied: Your ${provider} API key may have insufficient permissions or exceeded quota. Check your account at the provider's dashboard.`);
+    }
+
+    // Network errors
+    if (errorMsg.includes('network') || errorMsg.includes('failed to fetch') ||
+        errorMsg.includes('timeout')) {
+      throw new Error(`Network error: Unable to reach ${provider} API. Check your internet connection.`);
+    }
+
+    // Re-throw with original message if no specific pattern matched
+    throw error;
   }
 };
 
@@ -112,7 +151,7 @@ export const loadAISettings = async () => {
   if (legacy) {
     return { provider: 'gemini', key: legacy, model: '', baseUrl: '' };
   }
-  return { provider: 'gemini', key: '', model: '', baseUrl: '' };
+  return { provider: 'openai', key: '', model: '', baseUrl: '' };
 };
 
 /**

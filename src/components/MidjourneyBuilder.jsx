@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Image, Sparkles, Wand2, AlertCircle } from 'lucide-react';
+import { Image, Sparkles, Wand2, AlertCircle, XCircle } from 'lucide-react';
 import { TextArea } from '../lib/promptcraft-ui/components/atoms/Input.jsx';
 import { SectionHeader } from '../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
 import { TagGroup } from '../lib/promptcraft-ui/components/molecules/TagGroup.jsx';
 import { EnhanceButton } from '../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
 import { MIDJOURNEY_CATEGORIES } from '../lib/promptcraft-ui/constants/tagCategories.js';
 import { callAI } from '../utils/aiApi.js';
+import { EnhancementErrorModal } from './EnhancementErrorModal.jsx';
 
 /**
  * MidjourneyBuilder Component - For Midjourney prompt crafting
@@ -18,6 +19,7 @@ import { callAI } from '../utils/aiApi.js';
  * @param {function} deleteEnhancer - Function to delete an enhancer
  * @param {function} editEnhancer - Function to edit an enhancer
  * @param {function} syncEnhancer - Function to sync enhancer across builders
+ * @param {function} onOpenSettings - Function to open settings modal
  */
 export const MidjourneyBuilder = ({
   prompt,
@@ -27,19 +29,30 @@ export const MidjourneyBuilder = ({
   deleteEnhancer,
   editEnhancer,
   syncEnhancer,
+  onOpenSettings
 }) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [categories, setCategories] = useState(MIDJOURNEY_CATEGORIES);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [enhancementError, setEnhancementError] = useState('');
 
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
+
     const systemPrompt =
       "You are an expert Midjourney prompt engineer. Transform the user's concept into a detailed, visually rich prompt optimized for Midjourney v6. Focus on composition, lighting, style, mood, and artistic details. Keep it concise but descriptive (under 150 words). DO NOT include parameters like --ar, --v, or --style in your response. Return ONLY the descriptive prompt.";
 
-    const result = await callAI(prompt, systemPrompt);
-    setPrompt(result);
-    setIsEnhancing(false);
+    try {
+      const result = await callAI(prompt, systemPrompt);
+      setPrompt(result);
+    } catch (error) {
+      setEnhancementError(error.message || error.toString());
+      setShowErrorModal(true);
+      console.error('Enhancement error:', error);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const addModifier = (tag) => {
@@ -158,6 +171,14 @@ export const MidjourneyBuilder = ({
           ))}
         </div>
       </div>
+
+      {/* Enhancement Error Modal */}
+      <EnhancementErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onOpenSettings={onOpenSettings || (() => {})}
+        error={enhancementError}
+      />
     </div>
   );
 };

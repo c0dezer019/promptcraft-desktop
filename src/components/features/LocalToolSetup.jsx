@@ -8,7 +8,7 @@ import {
 import { fetch } from '@tauri-apps/plugin-http';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
+import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform.js';
 
 /**
  * LocalToolSetup Component

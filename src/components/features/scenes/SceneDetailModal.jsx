@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Download, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@promptcraft/ui';
+import { Button } from '../../../lib/promptcraft-ui';
 import { SceneRelations } from './SceneRelations';
 
 /**

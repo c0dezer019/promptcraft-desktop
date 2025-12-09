@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@promptcraft/ui':
-        specifier: github:c0dezer019/promptcraft-ui#fix/update-models-and-dark-mode
-        version: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tauri-apps/api':
         specifier: ^2
         version: 2.9.1
@@ -406,14 +403,6 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9':
-    resolution: {tarball: https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9}
-    version: 0.1.0
-    peerDependencies:
-      lucide-react: ^0.462.0
-      react: ^18.3.1
-      react-dom: ^18.3.1
-
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
 
@@ -618,9 +607,6 @@ packages:
 
   '@tauri-apps/plugin-sql@2.3.1':
     resolution: {integrity: sha512-iNgHnFIR+jRkx9INKVKepzMlxXtNkJUaWuhagFjT4dOttPaNyRnVHgwTjpqZhyVjiklDh2UdEPAJkQKiCPAekw==}
-
-  '@tauri-apps/plugin-store@2.4.1':
-    resolution: {integrity: sha512-ckGSEzZ5Ii4Hf2D5x25Oqnm2Zf9MfDWAzR+volY0z/OOBz6aucPKEY0F649JvQ0Vupku6UJo7ugpGRDOFOunkA==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1887,15 +1873,6 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.19.1
 
-  '@promptcraft/ui@https://codeload.github.com/c0dezer019/promptcraft-ui/tar.gz/8ba410dc54e8fa25f5f7295cd5e9c434957b92c9(lucide-react@0.462.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      lucide-react: 0.462.0(react@18.3.1)
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-    optionalDependencies:
-      '@tauri-apps/api': 2.9.1
-      '@tauri-apps/plugin-store': 2.4.1
-
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
   '@rollup/rollup-android-arm-eabi@4.53.3':
@@ -2034,11 +2011,6 @@ snapshots:
   '@tauri-apps/plugin-sql@2.3.1':
     dependencies:
       '@tauri-apps/api': 2.9.1
-
-  '@tauri-apps/plugin-store@2.4.1':
-    dependencies:
-      '@tauri-apps/api': 2.9.1
-    optional: true
 
   '@types/babel__core@7.20.5':
     dependencies:

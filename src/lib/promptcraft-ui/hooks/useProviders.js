@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { usePlatform } from '../lib/promptcraft-ui/hooks/usePlatform.js';
-import {
-  IMAGE_MODELS,
-  VIDEO_MODELS,
-  DEFAULT_MODELS,
-  getAllModels,
-  getModelById,
-  getModelTier
-} from '../constants/models.js';
-import { invoke } from '@tauri-apps/api/core';
+import { usePlatform } from './usePlatform.js';
+import { invoke } from '../utils/tauri.js';
 
 /**
  * Hook for managing AI generation providers
  * Lists available providers and their configurations
- *
- * LOCAL OVERRIDE: Updated for new model tier system
  */
 export function useProviders() {
   const { isDesktop } = usePlatform();
@@ -54,51 +44,25 @@ export function useProviders() {
    */
   const getProviderDisplayName = useCallback((providerName) => {
     const names = {
-      'openai': 'OpenAI',
-      'google': 'Google Veo',
+      'openai': 'OpenAI (DALL-E)',
+      'google': 'Google (Veo)',
+      'midjourney': 'Midjourney',
       'grok': 'Grok (xAI)',
-      'runway': 'Runway',
-      'luma': 'Luma AI',
-      'hailuo': 'Hailuo',
-      'local': 'Local',
-      'none': 'N/A',
     };
     return names[providerName] || providerName;
   }, []);
 
   /**
-   * Get default model for a category (Standard tier)
+   * Get default model for provider
    */
-  const getDefaultModel = useCallback((category) => {
-    return DEFAULT_MODELS[category] || DEFAULT_MODELS.image;
-  }, []);
-
-  /**
-   * Get all models for a category
-   */
-  const getModelsByCategory = useCallback((category) => {
-    return getAllModels(category);
-  }, []);
-
-  /**
-   * Get models grouped by tier for a category
-   */
-  const getModelsByTier = useCallback((category) => {
-    return category === 'image' ? IMAGE_MODELS : VIDEO_MODELS;
-  }, []);
-
-  /**
-   * Get tier for a specific model
-   */
-  const getModelTierInfo = useCallback((modelId) => {
-    return getModelTier(modelId);
-  }, []);
-
-  /**
-   * Get model configuration by ID
-   */
-  const getModelConfig = useCallback((modelId) => {
-    return getModelById(modelId);
+  const getDefaultModel = useCallback((providerName) => {
+    const defaults = {
+      'openai': 'dall-e-3',
+      'google': 'veo',
+      'midjourney': 'v6',
+      'grok': 'grok-1',
+    };
+    return defaults[providerName] || 'default';
   }, []);
 
   // Auto-load providers on mount
@@ -114,9 +78,5 @@ export function useProviders() {
     isProviderAvailable,
     getProviderDisplayName,
     getDefaultModel,
-    getModelsByCategory,
-    getModelsByTier,
-    getModelTierInfo,
-    getModelConfig,
   };
 }

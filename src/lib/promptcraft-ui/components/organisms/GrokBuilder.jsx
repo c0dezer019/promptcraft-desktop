@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
-import { Terminal, Sparkles, Loader2, Plus, Check, X, Zap, Download } from 'lucide-react';
-import { TextArea } from '../lib/promptcraft-ui/components/atoms/Input.jsx';
-import { SectionHeader } from '../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
-import { EnhanceButton } from '../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
-import { GROK_HELPER_BADGES } from '../lib/promptcraft-ui/constants/tagCategories.js';
-import { callAI } from '../utils/aiApi.js';
-import { useGeneration } from '../lib/promptcraft-ui/hooks/useGeneration.js';
-import { useProviders } from '../hooks/useProviders.js';
+import { Terminal, Sparkles, Loader2, Plus, Check, X, Zap } from 'lucide-react';
+import { TextArea } from '../atoms';
+import { SectionHeader, EnhanceButton } from '../molecules';
+import { GROK_HELPER_BADGES } from '../../constants/tagCategories';
+import { callAI } from '../../utils/aiApi';
+import { useGeneration } from '../../hooks/useGeneration.js';
+import { useProviders } from '../../hooks/useProviders.js';
+import { usePlatform } from '../../hooks/usePlatform.js';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 /**
- * GrokBuilder Component - For Grok / Aurora image generation
- * LOCAL OVERRIDE: Updated to use grok-2-image model
- *
+ * GrokBuilder Component - For Grok / Flux image generation
  * @param {string} prompt - Main prompt text
  * @param {function} setPrompt - Prompt setter
  * @param {string} workflowId - Current workflow ID (optional, for generation)
@@ -25,12 +23,11 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
   const [newBadge, setNewBadge] = useState('');
 
   // Generation hooks
+  const { isDesktop } = usePlatform();
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
-  const { getProviderDisplayName } = useProviders();
+  const { getProviderDisplayName, getDefaultModel } = useProviders();
   const [localError, setLocalError] = useState(null);
-
   const provider = 'grok';
-  const model = 'grok-2-image';
 
   const handleAddBadge = () => {
     if (newBadge.trim()) {
@@ -43,7 +40,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
-    let instruction = "You are an expert prompt writer for Grok (Aurora) image generation. Rewrite the user's prompt to be highly descriptive, using natural language. Focus on clarity and visual fidelity.";
+    let instruction = "You are an expert prompt writer for Grok (Flux) image generation. Rewrite the user's prompt to be highly descriptive, using natural language. Focus on clarity and visual fidelity.";
     if (tone === 'Fun Mode') instruction = "You are an expert prompt writer for Grok. Rewrite the user's prompt to be witty, rebellious, and humorous, while still describing an image. Make it fun.";
     if (tone === 'Technical') instruction = "You are an expert prompt writer. Rewrite the prompt to be precise, technical, and code-oriented if applicable.";
 
@@ -59,10 +56,10 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
     }
 
     setLocalError(null);
+    const model = getDefaultModel(provider);
     const parameters = {
       tone: tone,
-      n: 1,
-      response_format: 'url'
+      // Add Grok-specific parameters here if needed
     };
     await generate(provider, prompt, model, parameters);
   };
@@ -102,7 +99,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
           <TextArea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ask Grok something or describe an image for Aurora generation..."
+            placeholder="Ask Grok something or describe an image for Flux generation..."
             className="font-mono text-sm bg-gray-900 text-green-400 border border-gray-700"
             rows={16}
           />
@@ -144,35 +141,31 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
               </button>
             )}
           </div>
-
-          {/* Generation Button - Outside Main Container */}
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={handleGenerate}
-              disabled={generating || !prompt}
-              className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate with {getProviderDisplayName(provider)}
-                </>
-              )}
-            </button>
-          </div>
         </div>
 
-        {/* Generation Status & Results */}
-        {(error || localError || latestJob || completedJobs.length > 0) && (
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <SectionHeader icon={Zap} title="Generation Status" />
+        {/* AI Generation Section */}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <SectionHeader icon={Zap} title="AI Generation" />
 
             <div className="space-y-4 mt-4">
+              {/* Generation Button */}
+              <button
+                onClick={handleGenerate}
+                disabled={generating || !prompt}
+                className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Generate with {getProviderDisplayName(provider)}
+                  </>
+                )}
+              </button>
 
               {/* Error Display */}
               {(error || localError) && (
@@ -217,7 +210,6 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
               )}
             </div>
           </div>
-        )}
       </div>
     </div>
   );
@@ -254,24 +246,14 @@ const ResultDisplay = ({ result }) => {
           alt="Generated content"
           className="w-full rounded-lg border border-white/10"
         />
-        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <a
-            href={resultData.output_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors"
-          >
-            Open Full Size
-          </a>
-          <a
-            href={resultData.output_url}
-            download
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
-          >
-            <Download className="w-3 h-3" />
-            Download
-          </a>
-        </div>
+        <a
+          href={resultData.output_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-medium"
+        >
+          Open Full Size
+        </a>
       </div>
     );
   }

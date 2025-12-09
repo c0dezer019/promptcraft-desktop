@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { usePlatform } from '@promptcraft/ui';
+import { usePlatform } from '../lib/promptcraft-ui';
 import { invoke } from '@tauri-apps/api/core';
 
 /**

@@ -9,9 +9,9 @@ import {
     Image,
     Video,
 } from 'lucide-react';
-import { Button } from '@promptcraft/ui/components/atoms/Button.jsx';
-import { loadAISettings, saveAISettings } from '@promptcraft/ui/utils/aiApi.js';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
+import { Button } from '../lib/promptcraft-ui/components/atoms/Button.jsx';
+import { loadAISettings, saveAISettings } from '../lib/promptcraft-ui/utils/aiApi.js';
+import { usePlatform } from '../lib/promptcraft-ui/hooks/usePlatform.js';
 import { HardDrive } from 'lucide-react';
 import LocalToolSetup from './features/LocalToolSetup';
 import { invoke } from '@tauri-apps/api/core';

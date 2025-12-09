@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { usePromptManager } from '@promptcraft/ui/hooks/usePromptManager.js';
-import { useHistory } from '@promptcraft/ui/hooks/useHistory.js';
-import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
-import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from '@promptcraft/ui/utils/exportHelper.js';
+import { usePromptManager } from './lib/promptcraft-ui/hooks/usePromptManager.js';
+import { useHistory } from './lib/promptcraft-ui/hooks/useHistory.js';
+import { usePlatform } from './lib/promptcraft-ui/hooks/usePlatform.js';
+import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from './lib/promptcraft-ui/utils/exportHelper.js';
 
 // Navigation components
 import { TopNav } from './components/navigation/TopNav.jsx';

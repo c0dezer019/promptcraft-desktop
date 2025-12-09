@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Image, Sparkles, Wand2, AlertCircle } from 'lucide-react';
-import { TextArea } from '@promptcraft/ui/components/atoms/Input.jsx';
-import { SectionHeader } from '@promptcraft/ui/components/molecules/SectionHeader.jsx';
-import { TagGroup } from '@promptcraft/ui/components/molecules/TagGroup.jsx';
-import { EnhanceButton } from '@promptcraft/ui/components/molecules/EnhanceButton.jsx';
-import { MIDJOURNEY_CATEGORIES } from '@promptcraft/ui/constants/tagCategories.js';
+import { TextArea } from '../lib/promptcraft-ui/components/atoms/Input.jsx';
+import { SectionHeader } from '../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
+import { TagGroup } from '../lib/promptcraft-ui/components/molecules/TagGroup.jsx';
+import { EnhanceButton } from '../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
+import { MIDJOURNEY_CATEGORIES } from '../lib/promptcraft-ui/constants/tagCategories.js';
 import { callAI } from '../utils/aiApi.js';
 
 /**

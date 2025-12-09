@@ -1,11 +1,18 @@
 {
   "identifier": "api-access",
-  "description": "Allow access to local AI backend",
+  "description": "Allow access to local AI backend and custom commands",
   "windows": ["main"],
   "permissions": [
+    "core:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "dialog:default",
     {
       "identifier": "http:default",
-      "allow": ["http://127.0.0.1:8188/*"],
+      "allow": [
+        "http://127.0.0.1:8188/*",
+        "https://**"
+      ],
       "deny": []
     }
   ]

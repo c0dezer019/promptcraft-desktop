@@ -83,6 +83,12 @@ impl GenerationService {
         self.providers.remove(provider_name);
 
         match provider_name {
+            "anthropic" => {
+                let provider = anthropic::AnthropicProvider::with_config(anthropic::AnthropicConfig {
+                    api_key,
+                });
+                self.register_provider(Box::new(provider));
+            }
             "openai" => {
                 let provider = openai::OpenAIProvider::with_config(openai::OpenAIConfig {
                     api_key,

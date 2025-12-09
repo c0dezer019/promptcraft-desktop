@@ -206,3 +206,39 @@ pub fn check_port(address: String) -> bool {
 
     false
 }
+
+/// Call AI for text generation (used by enhance feature)
+#[tauri::command]
+pub async fn call_ai(
+    service: State<'_, Arc<RwLock<GenerationService>>>,
+    provider: String,
+    model: String,
+    prompt: String,
+    max_tokens: Option<u32>,
+    temperature: Option<f64>,
+) -> Result<String, String> {
+    use crate::generation::GenerationRequest;
+
+    let service = service.read().await;
+
+    let params = serde_json::json!({
+        "max_tokens": max_tokens.unwrap_or(4096),
+        "temperature": temperature.unwrap_or(1.0),
+    });
+
+    let request = GenerationRequest {
+        prompt,
+        model,
+        parameters: params,
+    };
+
+    let result = service
+        .generate(&provider, request)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // For text generation, the result is in output_data
+    result
+        .output_data
+        .ok_or_else(|| "No text output received".to_string())
+}

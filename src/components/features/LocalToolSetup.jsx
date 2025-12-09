@@ -5,14 +5,17 @@ import {
     loadLocalToolConfigs,
     saveLocalToolConfig,
 } from '../../utils/localToolConfig.js';
-import { invoke } from '@tauri-apps/api/core';
 import { fetch } from '@tauri-apps/plugin-http';
+import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+import { usePlatform } from '@promptcraft/ui/hooks/usePlatform.js';
 
 /**
  * LocalToolSetup Component
  * Modal for configuring local generation tool paths and connections
  */
 export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
+    const { isDesktop } = usePlatform();
     const [selectedTool, setSelectedTool] = useState('comfyui');
     const [installPath, setInstallPath] = useState('');
     const [apiUrl, setApiUrl] = useState('');
@@ -39,8 +42,7 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
     // Get default API URL for a tool
     const getDefaultApiUrl = toolId => {
         const tool = LOCAL_TOOLS.find(t => t.id === toolId);
-        return tool?.defaultUrl || '127.0.0.1:8188'; g
-        
+        return tool?.defaultUrl || '127.0.0.1:8188';
     };
 
     // Handle tool selection change
@@ -71,20 +73,17 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
 
     // Open folder picker (Tauri only)
     const handleBrowse = async () => {
-        if (window.__TAURI__) {
-            try {
-                const { open } = window.__TAURI__.dialog;
-                const selected = await open({
-                    directory: true,
-                    multiple: false,
-                    title: 'Select Installation Directory',
-                });
-                if (selected) {
-                    setInstallPath(selected);
-                }
-            } catch (error) {
-                console.error('Failed to open folder picker:', error);
+        try {
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: 'Select Installation Directory',
+            });
+            if (selected) {
+                setInstallPath(selected);
             }
+        } catch (error) {
+            console.error('Failed to open folder picker:', error);
         }
     };
 
@@ -117,9 +116,8 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
         const success = saveLocalToolConfig(selectedTool, config);
         if (success) {
             // Also configure in Tauri backend if in desktop mode
-            if (window.__TAURI__) {
+            if (isDesktop) {
                 try {
-                    const { invoke } = window.__TAURI__.core;
                     await invoke('configure_local_provider', {
                         provider: selectedTool,
                         apiUrl: finalApiUrl,
@@ -207,7 +205,7 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
                                         className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
                                         Auto-Detect
                                     </button>
-                                    {window.__TAURI__ && (
+                                    {isDesktop && (
                                         <button
                                             onClick={handleBrowse}
                                             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
@@ -342,7 +340,7 @@ export const LocalToolSetup = ({ isOpen, onClose, isEmbedded }) => {
                                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
                                     Auto-Detect
                                 </button>
-                                {window.__TAURI__ && (
+                                {isDesktop && (
                                     <button
                                         onClick={handleBrowse}
                                         className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"

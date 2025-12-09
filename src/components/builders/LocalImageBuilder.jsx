@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Wand2, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import { getActiveTool } from '../../utils/localToolConfig.js';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * LocalImageBuilder Component
@@ -53,38 +54,32 @@ export const LocalImageBuilder = ({
     });
 
     // Submit generation via Tauri backend
-    if (window.__TAURI__) {
-      try {
-        const { invoke } = window.__TAURI__.core;
+    try {
+      const parameters = {
+        model: selectedModel,
+        negative_prompt: negativePrompt,
+        steps,
+        cfg_scale: cfgScale,
+        width,
+        height,
+        sampler,
+        seed
+      };
 
-        const parameters = {
-          model: selectedModel,
-          negative_prompt: negativePrompt,
-          steps,
-          cfg_scale: cfgScale,
-          width,
-          height,
-          sampler,
-          seed
-        };
+      // Submit generation job
+      const job = await invoke('submit_generation', {
+        workflowId: null,
+        provider: activeTool.id,
+        prompt,
+        model: selectedModel,
+        parameters
+      });
 
-        // Submit generation job
-        const job = await invoke('submit_generation', {
-          workflowId: null,
-          provider: activeTool.id,
-          prompt,
-          model: selectedModel,
-          parameters
-        });
-
-        console.log('Generation job submitted:', job);
-        // TODO: Show job status and poll for results
-      } catch (error) {
-        console.error('Failed to submit generation:', error);
-        alert(`Generation failed: ${error}`);
-      }
-    } else {
-      alert('Desktop mode required for local generation');
+      console.log('Generation job submitted:', job);
+      // TODO: Show job status and poll for results
+    } catch (error) {
+      console.error('Failed to submit generation:', error);
+      alert(`Generation failed: ${error}`);
     }
   };
 

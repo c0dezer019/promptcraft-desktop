@@ -101,37 +101,8 @@ export default function PromptCraft() {
   // Get current model for active category
   const currentModel = selectedModel[activeCategory];
 
-  // Get prompt key based on model (map models to prompt storage keys)
-  const getPromptKey = (model) => {
-    // Map model IDs to prompt storage keys
-    const modelToKey = {
-      // Image models
-      'gpt-image-1-mini': 'dalle',
-      'gpt-image-1': 'dalle',
-      'grok-2-image': 'grok',
-      'aurora': 'grok',
-      'comfy': 'comfy',
-      'a1111': 'a1111',
-      'midjourney': 'midjourney',
-      // Video models - OpenAI
-      'sora': 'sora',
-      'sora-2-pro': 'sora',
-      // Video models - Google
-      'veo': 'veo',
-      'veo-3.1-generate-preview': 'veo',
-      // Video models - Runway
-      'runway-gen3-alpha': 'runway',
-      'runway-gen3-alpha-turbo': 'runway',
-      // Video models - Luma
-      'luma-ray': 'luma',
-      'luma-dream-machine': 'luma',
-      // Video models - Hailuo
-      'hailuo-minimax': 'hailuo',
-    };
-    return modelToKey[model] || model;
-  };
-
-  const promptKey = getPromptKey(currentModel);
+  // Use category as the prompt key to retain prompts across model switches
+  const promptKey = activeCategory;
 
   // Handlers
   const handleCopy = async () => {
@@ -164,15 +135,31 @@ export default function PromptCraft() {
     }));
   };
 
+  // Sync prompt from previous category when switching categories
+  const handleCategoryChange = (newCategory) => {
+    const oldCategory = activeCategory;
+    const oldPromptData = prompts[oldCategory];
+    const newPromptData = prompts[newCategory];
+
+    // If the new category has an empty prompt but old category has content, copy it over
+    if (oldPromptData?.main && !newPromptData?.main) {
+      updatePrompt(newCategory, 'main', oldPromptData.main);
+      if (oldPromptData.modifiers?.length > 0) {
+        updatePrompt(newCategory, 'modifiers', oldPromptData.modifiers);
+      }
+    }
+
+    setActiveCategory(newCategory);
+  };
+
   const handleImageAnalysisPrompt = (prompt) => {
-    // When user selects a prompt from image analysis, set it for the current image model
+    // When user selects a prompt from image analysis, set it for the image category
     if (activeCategory === 'image') {
-      updatePrompt(promptKey, 'main', prompt);
+      updatePrompt('image', 'main', prompt);
     } else {
       // Switch to image tab and set prompt
       setActiveCategory('image');
-      const imagePromptKey = getPromptKey(selectedModel.image);
-      updatePrompt(imagePromptKey, 'main', prompt);
+      updatePrompt('image', 'main', prompt);
     }
   };
 
@@ -183,9 +170,14 @@ export default function PromptCraft() {
 
     const { category, model, prompt } = data;
 
-    // Switch to appropriate category
-    if (category) {
-      setActiveCategory(category);
+    // Load prompt data first - use category as the key
+    if (prompt) {
+      const targetPromptKey = category || activeCategory;
+      if (prompt.main) updatePrompt(targetPromptKey, 'main', prompt.main);
+      if (prompt.modifiers) updatePrompt(targetPromptKey, 'modifiers', prompt.modifiers);
+      if (prompt.negative) updatePrompt(targetPromptKey, 'negative', prompt.negative);
+      if (prompt.nodes) updatePrompt(targetPromptKey, 'nodes', prompt.nodes);
+      if (prompt.params) updatePrompt(targetPromptKey, 'params', prompt.params);
     }
 
     // Set model if different
@@ -196,14 +188,9 @@ export default function PromptCraft() {
       }));
     }
 
-    // Load prompt data
-    if (prompt) {
-      const targetPromptKey = getPromptKey(model || currentModel);
-      if (prompt.main) updatePrompt(targetPromptKey, 'main', prompt.main);
-      if (prompt.modifiers) updatePrompt(targetPromptKey, 'modifiers', prompt.modifiers);
-      if (prompt.negative) updatePrompt(targetPromptKey, 'negative', prompt.negative);
-      if (prompt.nodes) updatePrompt(targetPromptKey, 'nodes', prompt.nodes);
-      if (prompt.params) updatePrompt(targetPromptKey, 'params', prompt.params);
+    // Switch to appropriate category (do this last to avoid syncing old prompt)
+    if (category && category !== activeCategory) {
+      setActiveCategory(category);
     }
 
     // Close scene manager
@@ -235,7 +222,7 @@ export default function PromptCraft() {
       {/* Top Navigation */}
       <TopNav
         activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
+        setActiveCategory={handleCategoryChange}
         selectedModel={currentModel}
         setSelectedModel={handleModelChange}
         onImageAnalysis={() => setShowImageAnalysis(true)}
@@ -315,9 +302,15 @@ export default function PromptCraft() {
             <LocalImageBuilder
               selectedModel={selectedLocalModel}
               prompt={currentPromptData.main || ''}
-              setPrompt={(val) => updatePrompt('local', 'main', val)}
+              setPrompt={(val) => updatePrompt(activeCategory, 'main', val)}
               negativePrompt={currentPromptData.negative || ''}
-              setNegativePrompt={(val) => updatePrompt('local', 'negative', val)}
+              setNegativePrompt={(val) => updatePrompt(activeCategory, 'negative', val)}
+              modifiers={currentPromptData.modifiers || []}
+              setModifiers={(val) => updatePrompt(activeCategory, 'modifiers', val)}
+              onOpenSettings={() => {
+                setSettingsInitialTab('enhancement');
+                setShowSettings(true);
+              }}
             />
           ) : (
             <LocalEmptyState onConfigure={() => setShowLocalToolSetup(true)} />

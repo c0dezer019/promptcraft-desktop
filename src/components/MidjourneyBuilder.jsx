@@ -41,7 +41,7 @@ export const MidjourneyBuilder = ({
     setIsEnhancing(true);
 
     const systemPrompt =
-      "You are an expert Midjourney prompt engineer. Transform the user's concept into a detailed, visually rich prompt optimized for Midjourney v6. Focus on composition, lighting, style, mood, and artistic details. Keep it concise but descriptive (under 150 words). DO NOT include parameters like --ar, --v, or --style in your response. Return ONLY the descriptive prompt.";
+      "You are an expert Midjourney prompt engineer. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: visual style, lighting, composition, colors, textures, camera angles, or atmosphere where not already specified. Do not remove or restructure existing content. Keep it under 150 words. DO NOT include parameters like --ar, --v, or --style. Return ONLY the enhanced prompt.";
 
     try {
       const result = await callAI(prompt, systemPrompt);

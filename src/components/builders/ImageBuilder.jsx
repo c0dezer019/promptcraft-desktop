@@ -162,11 +162,11 @@ const StandardImageBuilder = ({
 
     let systemPrompt;
     if (isOpenAIImage) {
-      systemPrompt = "You are an expert prompt engineer for OpenAI's GPT Image models. Transform the user's concept into a highly detailed, visually descriptive prompt. Focus on composition, lighting, style, colors, and mood. Keep it under 150 words. Return ONLY the prompt.";
+      systemPrompt = "You are an expert prompt engineer for OpenAI's GPT Image models. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: composition, lighting, style, colors, or mood where not already specified. Do not remove or restructure existing content. Keep it under 150 words. Return ONLY the enhanced prompt.";
     } else if (isSDModel) {
-      systemPrompt = "You are an expert prompt engineer for Stable Diffusion. Transform the user's concept into a detailed prompt using comma-separated tags and descriptors. Include quality tags, artistic style, composition, lighting, and technical details. Keep it concise. Return ONLY the prompt.";
+      systemPrompt = "You are an expert prompt engineer for Stable Diffusion. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE existing tags and descriptors. Only add: quality tags, artistic style, composition, lighting, or technical details where not specified. Do not remove or restructure existing content. Keep it concise. Return ONLY the enhanced prompt.";
     } else {
-      systemPrompt = "You are an expert image prompt engineer. Transform the user's concept into a detailed, visually rich description. Focus on composition, style, lighting, and mood. Return ONLY the prompt.";
+      systemPrompt = "You are an expert image prompt engineer. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: composition, style, lighting, or mood where not already specified. Do not remove or restructure existing content. Return ONLY the enhanced prompt.";
     }
 
     try {

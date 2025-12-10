@@ -69,22 +69,22 @@ export const VideoBuilder = ({
     let systemPrompt;
     switch (provider) {
       case 'openai':
-        systemPrompt = "You are an expert prompt engineer for OpenAI Sora. Take the user's concept and rewrite it into a highly detailed, physically accurate video description. Focus on lighting, camera movement, texture, and temporal consistency. Keep it under 100 words. Return ONLY the prompt.";
+        systemPrompt = "You are an expert prompt engineer for OpenAI Sora. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: lighting, camera movement, texture, temporal consistency, or physical accuracy where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
         break;
       case 'google':
-        systemPrompt = "You are an expert prompt engineer for Google Veo. Rewrite the user's concept into a cinematic 1080p video description. Focus on composition, color grading, and smooth motion. Return ONLY the prompt.";
+        systemPrompt = "You are an expert prompt engineer for Google Veo. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: composition, color grading, or smooth motion where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
         break;
       case 'runway':
-        systemPrompt = "You are an expert prompt engineer for Runway Gen-3. Create a detailed video prompt focusing on visual aesthetics, motion dynamics, and cinematic quality. Be descriptive but concise (under 100 words). Return ONLY the prompt.";
+        systemPrompt = "You are an expert prompt engineer for Runway Gen-3. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: visual aesthetics, motion dynamics, or cinematic quality where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
         break;
       case 'luma':
-        systemPrompt = "You are an expert prompt engineer for Luma Dream Machine. Write a vivid, detailed video description emphasizing natural motion, lighting, and photorealistic quality. Keep it under 100 words. Return ONLY the prompt.";
+        systemPrompt = "You are an expert prompt engineer for Luma Dream Machine. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: natural motion, lighting, or photorealistic quality where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
         break;
       case 'hailuo':
-        systemPrompt = "You are an expert prompt engineer for Hailuo MiniMax. Create a detailed video prompt focusing on smooth motion, high-quality rendering, and cinematic composition. Keep it under 100 words. Return ONLY the prompt.";
+        systemPrompt = "You are an expert prompt engineer for Hailuo MiniMax. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: smooth motion, high-quality rendering, or cinematic composition where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
         break;
       default:
-        systemPrompt = "You are an expert video prompt engineer. Transform the user's concept into a detailed, cinematic video description. Focus on visual quality, motion, and atmosphere. Keep it under 100 words. Return ONLY the prompt.";
+        systemPrompt = "You are an expert video prompt engineer. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: visual quality, motion, or atmosphere where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
     }
 
     try {

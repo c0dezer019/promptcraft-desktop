@@ -70,7 +70,7 @@ export const CLOUD_IMAGE_MODELS = {
             }
         },
         {
-            id: 'gemini-3-pro-image',
+            id: 'gemini-3-pro-image-preview',
             name: 'Nano Banana Pro (Gemini 3 Pro)',
             provider: 'google',
             category: 'image',

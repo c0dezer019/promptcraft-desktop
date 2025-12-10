@@ -6,6 +6,7 @@ pub struct Workflow {
     pub id: String,
     pub name: String,
     #[serde(rename = "type")]
+    #[sqlx(rename = "type")]
     pub workflow_type: String,
     pub data: String,
     pub created_at: String,
@@ -59,6 +60,7 @@ pub struct Job {
     pub workflow_id: String,
     pub scene_id: Option<String>,
     #[serde(rename = "type")]
+    #[sqlx(rename = "type")]
     pub job_type: String,
     pub status: String,
     pub data: String,

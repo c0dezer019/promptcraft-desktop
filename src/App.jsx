@@ -306,7 +306,7 @@ export default function PromptCraft() {
             {activeCategory === 'image' && (
               <ImageBuilder
                 model={currentModel}
-                workflowId={currentWorkflowId}
+                workflowId={currentWorkflowId || 'default'}
                 prompt={currentPromptData.main || ''}
                 setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
                 modifiers={currentPromptData.modifiers || []}
@@ -331,7 +331,7 @@ export default function PromptCraft() {
             {activeCategory === 'video' && (
               <VideoBuilder
                 model={currentModel}
-                workflowId={currentWorkflowId}
+                workflowId={currentWorkflowId || 'default'}
                 prompt={currentPromptData.main || ''}
                 setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
                 modifiers={currentPromptData.modifiers || []}

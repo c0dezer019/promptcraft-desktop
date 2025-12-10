@@ -190,7 +190,7 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
             description: 'Image generation (gpt-image-1) and video (Sora)',
         },
         google: {
-            name: 'Google Veo',
+            name: 'Gemini',
             icon: Video,
             description: 'Video generation with Veo 3.1',
         },

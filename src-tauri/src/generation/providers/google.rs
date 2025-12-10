@@ -237,7 +237,7 @@ impl GoogleProvider {
 
             // Poll the operation status
             let url = format!(
-                "https://generativelanguage.googleapis.com/v1beta/{}",
+                "https://generativelanguage.googleapis.com/v1beta/models/{}",
                 operation_name
             );
 
@@ -331,7 +331,7 @@ impl GenerationProvider for GoogleProvider {
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult> {
         match request.model.as_str() {
             // Nano Banana image generation models
-            "gemini-2.5-flash-image" | "gemini-3-pro-image" => {
+            "gemini-2.5-flash-image" | "gemini-3-pro-image-preview" => {
                 self.generate_image(&request.model, &request.prompt, &request.parameters).await
             }
             // Veo video generation models
@@ -340,7 +340,7 @@ impl GenerationProvider for GoogleProvider {
                 self.generate_video(&request.prompt, &request.parameters).await
             }
             _ => Err(anyhow::anyhow!(
-                "Unsupported Google model: {}. Use 'gemini-2.5-flash-image' or 'gemini-3-pro-image' for images, or 'veo-3.1-generate-preview' for video generation.",
+                "Unsupported Google model: {}. Use 'gemini-2.5-flash-image' or 'gemini-3-pro-image-preview' for images, or 'veo-3.1-generate-preview' for video generation.",
                 request.model
             )),
         }

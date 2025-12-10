@@ -233,20 +233,18 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
                             Local Tools
                         </div>
                     </button>
-                    {!isDesktop && (
-                        <button
-                            onClick={() => setActiveTab('generation')}
-                            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                activeTab === 'generation'
-                                    ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-white dark:bg-gray-900'
-                                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}>
-                            <div className="flex items-center justify-center gap-2">
-                                <Image size={16} />
-                                AI Generation
-                            </div>
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setActiveTab('generation')}
+                        className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                            activeTab === 'generation'
+                                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-white dark:bg-gray-900'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}>
+                        <div className="flex items-center justify-center gap-2">
+                            <Image size={16} />
+                            AI Generation
+                        </div>
+                    </button>
                 </div>
 
                 {/* Content */}

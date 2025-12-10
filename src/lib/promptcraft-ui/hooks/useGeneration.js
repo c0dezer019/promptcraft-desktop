@@ -101,6 +101,7 @@ export function useGeneration(workflowId) {
     generating: generating || isGenerating(),
     error,
     jobs,
+    loadJobs, // Export loadJobs for polling hook
     latestJob: getLatestJob(),
     completedJobs: getCompletedJobs(),
     failedJobs: getFailedJobs(),

@@ -108,6 +108,13 @@ pub async fn update_job(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn delete_job(db: State<'_, Database>, job_id: String) -> Result<(), String> {
+    JobOps::delete(db.pool(), &job_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Version Commands
 #[tauri::command]
 pub async fn create_version(

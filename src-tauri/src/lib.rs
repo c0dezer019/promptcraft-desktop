@@ -19,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             // Initialize database and generation service synchronously in setup
@@ -60,6 +61,7 @@ pub fn run() {
             commands::get_job,
             commands::list_jobs,
             commands::update_job,
+            commands::delete_job,
             commands::create_version,
             commands::list_versions,
             commands::submit_generation,

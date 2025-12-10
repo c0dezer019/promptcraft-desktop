@@ -7,6 +7,7 @@ import { EnhanceButton } from '../../lib/promptcraft-ui/components/molecules/Enh
 import { SD_CATEGORIES } from '../../lib/promptcraft-ui/constants/tagCategories.js';
 import { callAI } from '../../utils/aiApi.js';
 import { useGeneration } from '../../lib/promptcraft-ui/hooks/useGeneration.js';
+import { useJobPolling } from '../../lib/promptcraft-ui/hooks/useJobPolling.js';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform.js';
 import { useProviders } from '../../hooks/useProviders.js';
 import { getModelById, getModelProvider } from '../../constants/models.js';
@@ -139,9 +140,12 @@ const StandardImageBuilder = ({
   const [enhancementError, setEnhancementError] = useState('');
 
   // Generation hooks
-  const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
+  const { generate, generating, error, latestJob, completedJobs, jobs, loadJobs } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
+
+  // Auto-poll for job status updates
+  useJobPolling(loadJobs, jobs || []);
 
   // OpenAI Image Model (GPT-Image) specific parameters
   const [size, setSize] = useState('1024x1024');

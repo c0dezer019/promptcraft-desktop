@@ -238,6 +238,15 @@ impl JobOps {
 
         Ok(job)
     }
+
+    pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM jobs WHERE id = ?")
+            .bind(id)
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
 }
 
 /// Workflow version operations

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { usePromptManager } from './lib/promptcraft-ui/hooks/usePromptManager.js';
 import { useHistory } from './lib/promptcraft-ui/hooks/useHistory.js';
 import { usePlatform } from './lib/promptcraft-ui/hooks/usePlatform.js';
+import { useWorkflows } from './lib/promptcraft-ui/hooks/useWorkflows.js';
 import { exportPromptToMarkdown, copyToClipboard, exportComfyWorkflow, exportA1111Text } from './lib/promptcraft-ui/utils/exportHelper.js';
 
 // Navigation components
@@ -18,6 +19,7 @@ import { SettingsModal } from './components/SettingsModal.jsx';
 import { SceneManager } from './components/features/SceneManager.jsx';
 import { LocalEmptyState } from './components/features/LocalEmptyState.jsx';
 import { LocalToolSetup } from './components/features/LocalToolSetup.jsx';
+import JobHistoryPanel from './components/features/JobHistoryPanel.jsx';
 
 // Constants
 import { DEFAULT_MODELS } from './constants/models.js';
@@ -48,6 +50,7 @@ export default function PromptCraft() {
   const [settingsInitialTab, setSettingsInitialTab] = useState(null);
   const [showImageAnalysis, setShowImageAnalysis] = useState(false);
   const [showSceneManager, setShowSceneManager] = useState(false);
+  const [showJobHistory, setShowJobHistory] = useState(false);
 
   // Generation mode state (cloud vs local)
   const [generationMode, setGenerationMode] = useState(() => {
@@ -67,6 +70,25 @@ export default function PromptCraft() {
   } = usePromptManager();
   const { history, addToHistory } = useHistory();
   const { platform, isDesktop, isWeb } = usePlatform();
+  const { workflows, createWorkflow } = useWorkflows();
+
+  // Current workflow ID (or create default workflow)
+  const [currentWorkflowId, setCurrentWorkflowId] = useState('default');
+
+  // Initialize default workflow if needed
+  useEffect(() => {
+    if (isDesktop && workflows.length === 0) {
+      // Create a default workflow on first load
+      createWorkflow('Default Workflow', 'image', {}).then(workflow => {
+        if (workflow) {
+          setCurrentWorkflowId(workflow.id);
+        }
+      });
+    } else if (isDesktop && workflows.length > 0 && currentWorkflowId === 'default') {
+      // Use the first workflow if we're still on 'default'
+      setCurrentWorkflowId(workflows[0].id);
+    }
+  }, [isDesktop, workflows, createWorkflow, currentWorkflowId]);
 
   // Platform detection logging
   useEffect(() => {
@@ -227,6 +249,7 @@ export default function PromptCraft() {
         setSelectedModel={handleModelChange}
         onImageAnalysis={() => setShowImageAnalysis(true)}
         onOpenSceneManager={() => setShowSceneManager(true)}
+        onOpenJobHistory={() => setShowJobHistory(true)}
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
         openSettings={() => setShowSettings(true)}
@@ -250,6 +273,13 @@ export default function PromptCraft() {
         onClose={() => setShowLocalToolSetup(false)}
       />
 
+      {/* Job History Panel */}
+      <JobHistoryPanel
+        isOpen={showJobHistory}
+        onClose={() => setShowJobHistory(false)}
+        workflowId={null}
+      />
+
       {/* Main Content */}
       <main className="pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
         {generationMode === 'cloud' ? (
@@ -258,6 +288,7 @@ export default function PromptCraft() {
             {activeCategory === 'image' && (
               <ImageBuilder
                 model={currentModel}
+                workflowId={currentWorkflowId}
                 prompt={currentPromptData.main || ''}
                 setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
                 modifiers={currentPromptData.modifiers || []}
@@ -282,6 +313,7 @@ export default function PromptCraft() {
             {activeCategory === 'video' && (
               <VideoBuilder
                 model={currentModel}
+                workflowId={currentWorkflowId}
                 prompt={currentPromptData.main || ''}
                 setPrompt={(val) => updatePrompt(promptKey, 'main', val)}
                 modifiers={currentPromptData.modifiers || []}
@@ -301,6 +333,7 @@ export default function PromptCraft() {
           hasAnyConfiguredTool() ? (
             <LocalImageBuilder
               selectedModel={selectedLocalModel}
+              workflowId={currentWorkflowId}
               prompt={currentPromptData.main || ''}
               setPrompt={(val) => updatePrompt(activeCategory, 'main', val)}
               negativePrompt={currentPromptData.negative || ''}

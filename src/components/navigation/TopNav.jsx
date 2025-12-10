@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Sun, Moon, ScanSearch, Palette, Grid3x3 } from 'lucide-react';
+import { Settings, Sun, Moon, ScanSearch, Palette, Grid3x3, History } from 'lucide-react';
 import { TabBar } from './TabBar.jsx';
 import { ModelSelector } from './ModelSelector.jsx';
 import { LocalModelSelector } from './LocalModelSelector.jsx';
@@ -19,6 +19,7 @@ export const TopNav = ({
   toggleDarkMode,
   openSettings,
   onOpenSceneManager,
+  onOpenJobHistory,
   generationMode,
   setGenerationMode,
   selectedLocalModel,
@@ -72,6 +73,17 @@ export const TopNav = ({
           >
             <Grid3x3 className="w-5 h-5" />
           </button>
+
+          {/* Job History Button */}
+          {onOpenJobHistory && (
+            <button
+              onClick={onOpenJobHistory}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+              title="Generation History"
+            >
+              <History className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Image Analysis Button */}
           <button

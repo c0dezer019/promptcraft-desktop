@@ -49,8 +49,8 @@ export const VideoBuilder = ({
     if (!prompt) return;
     setIsEnhancing(true);
     const systemPrompt = isSora
-      ? "You are an expert prompt engineer for OpenAI Sora. Take the user's concept and rewrite it into a highly detailed, physically accurate video description. Focus on lighting, camera movement, texture, and temporal consistency. Keep it under 100 words. Return ONLY the prompt."
-      : "You are an expert prompt engineer for Google Veo. Rewrite the user's concept into a cinematic 1080p video description. Focus on composition, color grading, and smooth motion. Return ONLY the prompt.";
+      ? "You are an expert prompt engineer for OpenAI Sora. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: lighting, camera movement, texture, temporal consistency, or physical accuracy where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt."
+      : "You are an expert prompt engineer for Google Veo. Enhance the user's prompt by adding missing details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, actions, scene descriptions). Only add details about: composition, color grading, smooth motion, or cinematic quality where not specified. Do not remove or restructure existing content. Keep it under 100 words. Return ONLY the enhanced prompt.";
 
     const result = await callAI(prompt, systemPrompt);
     setPrompt(result);

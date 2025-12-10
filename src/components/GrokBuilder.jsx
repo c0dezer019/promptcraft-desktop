@@ -8,6 +8,7 @@ import { callAI } from '../utils/aiApi.js';
 import { useGeneration } from '../lib/promptcraft-ui/hooks/useGeneration.js';
 import { useProviders } from '../hooks/useProviders.js';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { EnhancementErrorModal } from './EnhancementErrorModal.jsx';
 
 /**
  * GrokBuilder Component - For Grok / Aurora image generation
@@ -16,13 +17,16 @@ import { CheckCircle2, XCircle } from 'lucide-react';
  * @param {string} prompt - Main prompt text
  * @param {function} setPrompt - Prompt setter
  * @param {string} workflowId - Current workflow ID (optional, for generation)
+ * @param {function} onOpenSettings - Function to open settings modal
  */
-export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
+export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenSettings }) => {
   const [tone, setTone] = useState('Standard');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [helperBadges, setHelperBadges] = useState(GROK_HELPER_BADGES);
   const [isAddingBadge, setIsAddingBadge] = useState(false);
   const [newBadge, setNewBadge] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [enhancementError, setEnhancementError] = useState('');
 
   // Generation hooks
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
@@ -43,13 +47,22 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
-    let instruction = "You are an expert prompt writer for Grok (Aurora) image generation. Rewrite the user's prompt to be highly descriptive, using natural language. Focus on clarity and visual fidelity.";
-    if (tone === 'Fun Mode') instruction = "You are an expert prompt writer for Grok. Rewrite the user's prompt to be witty, rebellious, and humorous, while still describing an image. Make it fun.";
-    if (tone === 'Technical') instruction = "You are an expert prompt writer. Rewrite the prompt to be precise, technical, and code-oriented if applicable.";
+    setLocalError(null);
 
-    const result = await callAI(prompt, instruction + " Return ONLY the prompt text.");
-    setPrompt(result);
-    setIsEnhancing(false);
+    let instruction = "You are an expert prompt writer for Grok (Aurora) image generation. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). Only add details about: clarity, visual fidelity, or descriptive elements where not specified. Do not remove or restructure existing content.";
+    if (tone === 'Fun Mode') instruction = "You are an expert prompt writer for Grok. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details. Add witty, rebellious, or humorous visual elements where appropriate, but do not remove or restructure existing content.";
+    if (tone === 'Technical') instruction = "You are an expert prompt writer. Enhance the user's prompt by adding missing technical details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details. Only add precise, technical elements where appropriate, but do not remove or restructure existing content.";
+
+    try {
+      const result = await callAI(prompt, instruction + " Return ONLY the prompt text.");
+      setPrompt(result);
+    } catch (error) {
+      setEnhancementError(error.message || error.toString());
+      setShowErrorModal(true);
+      console.error('Enhancement error:', error);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -219,6 +232,14 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
           </div>
         )}
       </div>
+
+      {/* Enhancement Error Modal */}
+      <EnhancementErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onOpenSettings={onOpenSettings || (() => {})}
+        error={enhancementError}
+      />
     </div>
   );
 };

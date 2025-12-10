@@ -26,7 +26,7 @@ export async function callAI(userPrompt, systemPrompt = '', options = {}) {
     const settingsStr = localStorage.getItem('promptcraft_ai_settings');
     const settings = settingsStr
         ? JSON.parse(settingsStr)
-        : { provider: 'anthropic', key: '', model: '', baseUrl: '' };
+        : { provider: 'openai', key: '', model: '', baseUrl: '' };
 
     // Provider-specific default models
     const getDefaultModel = (providerName) => {
@@ -37,13 +37,13 @@ export async function callAI(userPrompt, systemPrompt = '', options = {}) {
             minimax: 'abab6.5s-chat',
             venice: 'llama-3.3-70b',
         };
-        return defaults[providerName] || 'claude-3-5-sonnet-20241022';
+        return defaults[providerName] || 'gpt-4o';
     };
 
     // Use settings from localStorage, but allow options to override
     const {
-        provider = settings.provider || 'anthropic',
-        model = settings.model || getDefaultModel(settings.provider || 'anthropic'),
+        provider = settings.provider || 'openai',
+        model = settings.model || getDefaultModel(settings.provider || 'openai'),
         maxTokens = 4096,
         temperature = 1.0,
     } = options;
@@ -74,6 +74,42 @@ export async function callAI(userPrompt, systemPrompt = '', options = {}) {
         return result;
     } catch (error) {
         console.error('[aiApi] Tauri AI call failed:', error);
-        throw new Error(`AI call failed: ${error}`);
+
+        // Parse error message to provide helpful feedback
+        const errorStr = error.toString().toLowerCase();
+
+        // Authentication errors (401, 403, invalid key)
+        if (errorStr.includes('401') || errorStr.includes('unauthorized') ||
+            errorStr.includes('invalid') || errorStr.includes('authentication')) {
+            throw new Error(
+                `Authentication failed: Invalid API key for ${provider}. Please check your API key in Settings.`
+            );
+        }
+
+        // Permission/quota errors (403, quota exceeded)
+        if (errorStr.includes('403') || errorStr.includes('forbidden') ||
+            errorStr.includes('quota') || errorStr.includes('rate limit')) {
+            throw new Error(
+                `Access denied: Your ${provider} API key may have insufficient permissions or exceeded quota. Check your account at the provider's dashboard.`
+            );
+        }
+
+        // Network errors
+        if (errorStr.includes('network') || errorStr.includes('connection') ||
+            errorStr.includes('timeout') || errorStr.includes('econnrefused')) {
+            throw new Error(
+                `Network error: Unable to reach ${provider} API. Check your internet connection.`
+            );
+        }
+
+        // Model not found errors
+        if (errorStr.includes('model') && (errorStr.includes('not found') || errorStr.includes('does not exist'))) {
+            throw new Error(
+                `Model error: The specified model "${model}" is not available for ${provider}. Try using a different model.`
+            );
+        }
+
+        // Generic error with original message
+        throw new Error(`AI call failed: ${error.message || error}`);
     }
 }

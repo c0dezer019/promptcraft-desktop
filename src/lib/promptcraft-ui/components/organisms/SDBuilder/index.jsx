@@ -108,7 +108,7 @@ export const SDBuilder = ({
     if (target === 'positive') {
       if (!prompt) return;
       setIsEnhancingPos(true);
-      const instruction = "You are an expert Stable Diffusion prompt engineer. Rewrite the user's concept into a comma-separated list of high-quality tags. Include art styles, lighting, and camera tags. Use standard Danbooru formatting where possible. e.g. 'masterpiece, best quality, 1girl, ...'. Return ONLY the comma separated tags.";
+      const instruction = "You are an expert Stable Diffusion prompt engineer. Enhance the user's prompt by adding missing tags ONLY where they are lacking. PRESERVE all existing tags and descriptors. If already in comma-separated tag format, maintain that format. If in natural language, maintain natural language. Only add: quality tags (masterpiece, best quality), art styles, lighting, camera angles, or technical details where not already specified. Do not remove or restructure existing tags. Use standard Danbooru formatting for new tags where appropriate. Return ONLY the enhanced tags or prompt.";
       const result = await callAI(prompt, instruction);
       setPrompt(result);
       setIsEnhancingPos(false);

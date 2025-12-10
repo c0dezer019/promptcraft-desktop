@@ -34,7 +34,7 @@ export const DallEBuilder = ({ prompt, setPrompt, workflowId = 'default' }) => {
     if (!prompt) return;
     setIsEnhancing(true);
     const systemPrompt =
-      "You are an expert DALL-E 3 prompt engineer. Transform the user's concept into a detailed, vivid prompt optimized for DALL-E 3. Focus on composition, lighting, artistic style, mood, and visual details. Keep it descriptive but concise (under 150 words). Return ONLY the descriptive prompt.";
+      "You are an expert DALL-E 3 prompt engineer. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: visual style, lighting, composition, colors, artistic style, mood, or atmosphere where not already specified. Do not remove or restructure existing content. Keep it under 150 words. Return ONLY the enhanced prompt.";
 
     const result = await callAI(prompt, systemPrompt);
     setPrompt(result);

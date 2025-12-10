@@ -10,6 +10,7 @@ import { useGeneration } from '../../lib/promptcraft-ui/hooks/useGeneration.js';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform.js';
 import { useProviders } from '../../hooks/useProviders.js';
 import { getModelById, getModelProvider } from '../../constants/models.js';
+import { EnhancementErrorModal } from '../EnhancementErrorModal.jsx';
 
 // Import specialized builders
 import { GrokBuilder } from '../GrokBuilder.jsx';
@@ -34,6 +35,7 @@ import { MidjourneyBuilder } from '../MidjourneyBuilder.jsx';
  * @param {function} editEnhancer - Function to edit an enhancer
  * @param {function} syncEnhancer - Function to sync enhancer across builders
  * @param {string} workflowId - Current workflow ID (optional, for generation)
+ * @param {function} onOpenSettings - Function to open settings modal
  */
 export const ImageBuilder = ({
   model,
@@ -50,7 +52,8 @@ export const ImageBuilder = ({
   deleteEnhancer,
   editEnhancer,
   syncEnhancer,
-  workflowId = 'default'
+  workflowId = 'default',
+  onOpenSettings
 }) => {
   // Route to specialized builders for Grok and Midjourney
   if (model === 'grok-2-image' || model === 'aurora') {
@@ -59,6 +62,7 @@ export const ImageBuilder = ({
         prompt={prompt}
         setPrompt={setPrompt}
         workflowId={workflowId}
+        onOpenSettings={onOpenSettings}
       />
     );
   }
@@ -73,6 +77,7 @@ export const ImageBuilder = ({
         deleteEnhancer={deleteEnhancer}
         editEnhancer={editEnhancer}
         syncEnhancer={syncEnhancer}
+        onOpenSettings={onOpenSettings}
       />
     );
   }
@@ -95,6 +100,7 @@ export const ImageBuilder = ({
       editEnhancer={editEnhancer}
       syncEnhancer={syncEnhancer}
       workflowId={workflowId}
+      onOpenSettings={onOpenSettings}
     />
   );
 };
@@ -117,7 +123,8 @@ const StandardImageBuilder = ({
   deleteEnhancer,
   editEnhancer,
   syncEnhancer,
-  workflowId
+  workflowId,
+  onOpenSettings
 }) => {
   const modelConfig = getModelById(model);
   const provider = getModelProvider(model);
@@ -128,6 +135,8 @@ const StandardImageBuilder = ({
 
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [categories, setCategories] = useState(SD_CATEGORIES);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [enhancementError, setEnhancementError] = useState('');
 
   // Generation hooks
   const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
@@ -149,19 +158,27 @@ const StandardImageBuilder = ({
   const handleEnhance = async () => {
     if (!prompt) return;
     setIsEnhancing(true);
+    setLocalError(null);
 
     let systemPrompt;
     if (isOpenAIImage) {
-      systemPrompt = "You are an expert prompt engineer for OpenAI's GPT Image models. Transform the user's concept into a highly detailed, visually descriptive prompt. Focus on composition, lighting, style, colors, and mood. Keep it under 150 words. Return ONLY the prompt.";
+      systemPrompt = "You are an expert prompt engineer for OpenAI's GPT Image models. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: composition, lighting, style, colors, or mood where not already specified. Do not remove or restructure existing content. Keep it under 150 words. Return ONLY the enhanced prompt.";
     } else if (isSDModel) {
-      systemPrompt = "You are an expert prompt engineer for Stable Diffusion. Transform the user's concept into a detailed prompt using comma-separated tags and descriptors. Include quality tags, artistic style, composition, lighting, and technical details. Keep it concise. Return ONLY the prompt.";
+      systemPrompt = "You are an expert prompt engineer for Stable Diffusion. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE existing tags and descriptors. Only add: quality tags, artistic style, composition, lighting, or technical details where not specified. Do not remove or restructure existing content. Keep it concise. Return ONLY the enhanced prompt.";
     } else {
-      systemPrompt = "You are an expert image prompt engineer. Transform the user's concept into a detailed, visually rich description. Focus on composition, style, lighting, and mood. Return ONLY the prompt.";
+      systemPrompt = "You are an expert image prompt engineer. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: composition, style, lighting, or mood where not already specified. Do not remove or restructure existing content. Return ONLY the enhanced prompt.";
     }
 
-    const result = await callAI(prompt, systemPrompt);
-    setPrompt(result);
-    setIsEnhancing(false);
+    try {
+      const result = await callAI(prompt, systemPrompt);
+      setPrompt(result);
+    } catch (error) {
+      setEnhancementError(error.message || error.toString());
+      setShowErrorModal(true);
+      console.error('Enhancement error:', error);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const addModifier = (tag) => {
@@ -513,6 +530,14 @@ const StandardImageBuilder = ({
           </div>
         </div>
       )}
+
+      {/* Enhancement Error Modal */}
+      <EnhancementErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onOpenSettings={onOpenSettings || (() => {})}
+        error={enhancementError}
+      />
     </div>
   );
 };

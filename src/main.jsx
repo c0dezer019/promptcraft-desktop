@@ -2,11 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import { initStorage } from './lib/promptcraft-ui/utils/storage.js';
 
 // Debug logging for deployment
 console.log('🚀 PromptCraft Starting...');
 console.log('Environment:', import.meta.env.MODE);
 console.log('Base URL:', import.meta.env.BASE_URL);
+
+// Initialize storage system (Tauri Store for desktop, localStorage for web)
+initStorage().then(() => {
+  console.log('✅ Storage system initialized');
+}).catch(error => {
+  console.error('❌ Failed to initialize storage:', error);
+});
 
 const rootElement = document.getElementById('root');
 console.log('Root element found:', !!rootElement);

@@ -59,6 +59,29 @@ export const CLOUD_IMAGE_MODELS = {
             },
         },
         {
+            id: 'gemini-2.5-flash-image',
+            name: 'Nano Banana (Gemini 2.5 Flash)',
+            provider: 'google',
+            category: 'image',
+            tier: 'highQuality',
+            parameters: {
+                aspect_ratio: ['1:1', '16:9', '9:16', '4:3', '3:4'],
+                n: [1, 2, 4],
+            }
+        },
+        {
+            id: 'gemini-3-pro-image',
+            name: 'Nano Banana Pro (Gemini 3 Pro)',
+            provider: 'google',
+            category: 'image',
+            tier: 'highQuality',
+            parameters: {
+                aspect_ratio: ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'],
+                resolution: ['1K', '2K', '4K'],
+                n: [1, 2, 4],
+            }
+        },
+        {
             id: 'minimax-image-1.0',
             name: 'Minimax Image 1.0 ',
             provider: 'minimax',

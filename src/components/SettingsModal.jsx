@@ -10,7 +10,7 @@ import {
     Video,
 } from 'lucide-react';
 import { Button } from '../lib/promptcraft-ui/components/atoms/Button.jsx';
-import { loadAISettings, saveAISettings } from '../lib/promptcraft-ui/utils/aiApi.js';
+import { loadAISettings, saveAISettings } from '../utils/aiApi.js';
 import { usePlatform } from '../lib/promptcraft-ui/hooks/usePlatform.js';
 import { HardDrive } from 'lucide-react';
 import LocalToolSetup from './features/LocalToolSetup';
@@ -52,39 +52,50 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
 
     useEffect(() => {
         if (isOpen) {
-            // Load enhancement settings
-            const settings = loadAISettings();
-            setProvider(settings.provider || 'openai');
+            // Load enhancement settings asynchronously
+            const loadSettings = async () => {
+                try {
+                    // Load main settings
+                    const settings = await loadAISettings();
+                    setProvider(settings.provider || 'openai');
+                    setModel(settings.model || '');
+                    setBaseUrl(settings.baseUrl || '');
 
-            // Load keys for all enhancement providers
-            const geminiSettings = loadAISettings('gemini');
-            const anthropicSettings = loadAISettings('anthropic');
-            const openaiSettings = loadAISettings('openai');
-            const miniMaxSettings = loadAISettings('minimax')
-            const veniceSettings = loadAISettings('venice')
+                    // Load keys for all enhancement providers in parallel
+                    const [geminiSettings, anthropicSettings, openaiSettings, miniMaxSettings, veniceSettings] =
+                        await Promise.all([
+                            loadAISettings('gemini'),
+                            loadAISettings('anthropic'),
+                            loadAISettings('openai'),
+                            loadAISettings('minimax'),
+                            loadAISettings('venice'),
+                        ]);
 
-            setEnhancementKeys({
-                gemini: geminiSettings.key || '',
-                anthropic: anthropicSettings.key || '',
-                openai: openaiSettings.key || '',
-                minimax: miniMaxSettings.key || '',
-                venice: veniceSettings.key || ''
-            });
+                    setEnhancementKeys({
+                        gemini: geminiSettings.key || '',
+                        anthropic: anthropicSettings.key || '',
+                        openai: openaiSettings.key || '',
+                        minimax: miniMaxSettings.key || '',
+                        venice: veniceSettings.key || '',
+                    });
 
-            setModel(settings.model || '');
-            setBaseUrl(settings.baseUrl || '');
+                    // Load generation settings
+                    const genSettings = JSON.parse(
+                        localStorage.getItem('generation_providers') || '{}'
+                    );
+                    setGenProviders({
+                        openai: genSettings.openai || { enabled: false, apiKey: '' },
+                        google: genSettings.google || { enabled: false, apiKey: '' },
+                        grok: genSettings.grok || { enabled: false, apiKey: '' },
+                        minimax: genSettings.minimax || { enabled: false, apiKey: '' },
+                        venice: genSettings.venice || { enabled: false, apiKey: '' },
+                    });
+                } catch (error) {
+                    console.error('Failed to load settings:', error);
+                }
+            };
 
-            // Load generation settings
-            const genSettings = JSON.parse(
-                localStorage.getItem('generation_providers') || '{}'
-            );
-            setGenProviders({
-                openai: genSettings.openai || { enabled: false, apiKey: '' },
-                google: genSettings.google || { enabled: false, apiKey: '' },
-                grok: genSettings.grok || { enabled: false, apiKey: '' },
-                minimax: genSettings.minimax || { enabled: false, apiKey: '' },
-                venice: genSettings.venice || { enabled: false, apiKey: '' }
-            });
+            loadSettings();
 
             // Set tab based on initialTab prop, or default based on desktop mode
             if (initialTab) {
@@ -98,28 +109,32 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
     }, [isOpen, isDesktop, initialTab]);
 
     const handleSave = async () => {
-        // Save settings for the current provider with its specific key
-        saveAISettings({
-            provider,
-            key: enhancementKeys[provider],
-            model,
-            baseUrl,
-        });
+        try {
+            // Save settings for the current provider with its specific key
+            await saveAISettings({
+                provider,
+                key: enhancementKeys[provider],
+                model,
+                baseUrl,
+            });
 
-        // If in desktop mode and using Anthropic, configure it in the backend
-        if (isDesktop && provider === 'anthropic' && enhancementKeys[provider]) {
-            try {
-                await invoke('configure_provider', {
-                    provider: 'anthropic',
-                    apiKey: enhancementKeys[provider],
-                });
-            } catch (error) {
-                console.error('Failed to configure Anthropic provider:', error);
+            // If in desktop mode and using Anthropic, configure it in the backend
+            if (isDesktop && provider === 'anthropic' && enhancementKeys[provider]) {
+                try {
+                    await invoke('configure_provider', {
+                        provider: 'anthropic',
+                        apiKey: enhancementKeys[provider],
+                    });
+                } catch (error) {
+                    console.error('Failed to configure Anthropic provider:', error);
+                }
             }
-        }
 
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+        }
     };
 
     const updateEnhancementKey = value => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, CheckCircle2, XCircle, Loader2, Clock, Download, RefreshCw, Copy, Check } from 'lucide-react';
 import { downloadJobResult } from '../../utils/downloadHelper';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform';
+import { isValidImageUrl } from '../../utils/urlValidator';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -102,6 +103,11 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
   const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
   const jobResult = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
 
+  // Validate the output URL to prevent XSS
+  const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
+    ? jobResult.output_url
+    : null;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -125,14 +131,20 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Result Preview */}
-          {jobResult?.output_url && (
+          {safeOutputUrl && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Result</label>
               <div className="relative group">
                 <img
-                  src={jobResult.output_url}
+                  src={safeOutputUrl}
                   alt="Generation result"
                   className="w-full rounded-lg border border-gray-700"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    console.error('Failed to load image from URL:', safeOutputUrl);
+                  }}
                 />
                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button

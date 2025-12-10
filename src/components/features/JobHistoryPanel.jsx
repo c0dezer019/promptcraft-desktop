@@ -5,6 +5,7 @@ import { useJobPolling } from '../../lib/promptcraft-ui/hooks/useJobPolling';
 import { downloadJobResult } from '../../utils/downloadHelper';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform';
 import JobDetailModal from './JobDetailModal';
+import { isValidImageUrl } from '../../utils/urlValidator';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -44,6 +45,11 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop }) => {
   const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
   const jobResult = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
 
+  // Validate the output URL to prevent XSS
+  const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
+    ? jobResult.output_url
+    : null;
+
   const handleDownload = async (e) => {
     e.stopPropagation();
     try {
@@ -79,12 +85,14 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop }) => {
       className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
     >
       {/* Image Preview */}
-      {jobResult?.output_url && (
+      {safeOutputUrl && (
         <div className="aspect-square relative overflow-hidden rounded-t-lg">
           <img
-            src={jobResult.output_url}
+            src={safeOutputUrl}
             alt="Generation result"
             className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
           />
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <button

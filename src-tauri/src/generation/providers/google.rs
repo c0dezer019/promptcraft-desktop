@@ -4,14 +4,14 @@ use serde::{Deserialize, Serialize};
 
 use super::super::{GenerationProvider, GenerationRequest, GenerationResult};
 
-/// Google AI configuration (for Veo video generation)
+/// Google AI configuration (for Veo video generation and Nano Banana image generation)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoogleConfig {
     pub api_key: String,
     pub project_id: Option<String>,
 }
 
-/// Google provider (Veo for video generation via Gemini API)
+/// Google provider (Veo for video generation, Nano Banana for image generation via Gemini API)
 pub struct GoogleProvider {
     config: Option<GoogleConfig>,
     client: reqwest::Client,
@@ -30,6 +30,105 @@ impl GoogleProvider {
             config: Some(config),
             client: reqwest::Client::new(),
         }
+    }
+
+    /// Generate image using Nano Banana (Gemini 2.5 Flash or Gemini 3 Pro Image)
+    async fn generate_image(
+        &self,
+        model: &str,
+        prompt: &str,
+        params: &serde_json::Value,
+    ) -> Result<GenerationResult> {
+        let config = self
+            .config
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Google API key not configured"))?;
+
+        // Number of images to generate
+        let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(1);
+
+        // Aspect ratio: 1:1, 16:9, 9:16, 4:3, 3:4, 21:9
+        let aspect_ratio = params
+            .get("aspect_ratio")
+            .or_else(|| params.get("aspectRatio"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("1:1");
+
+        // Resolution (for Gemini 3 Pro Image only): 1K, 2K, 4K
+        let resolution = params
+            .get("resolution")
+            .and_then(|v| v.as_str());
+
+        // Build the request body
+        let mut generation_config = serde_json::json!({
+            "responseCount": n,
+            "aspectRatio": aspect_ratio,
+        });
+
+        // Add resolution for Gemini 3 Pro Image
+        if model.contains("gemini-3") || model.contains("pro-image") {
+            if let Some(res) = resolution {
+                generation_config["resolution"] = serde_json::Value::String(res.to_string());
+            }
+        }
+
+        let request_body = serde_json::json!({
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }],
+            "generationConfig": generation_config
+        });
+
+        // Use the Gemini API endpoint
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateImages",
+            model
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .header("x-goog-api-key", &config.api_key)
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_text = response.text().await?;
+            return Err(anyhow::anyhow!(
+                "Google Nano Banana API error ({}): {}",
+                status,
+                error_text
+            ));
+        }
+
+        let response_data: serde_json::Value = response.json().await?;
+
+        // Extract image data from response
+        // The API returns base64-encoded images in the "images" array
+        let images = response_data
+            .get("images")
+            .and_then(|imgs| imgs.as_array())
+            .ok_or_else(|| anyhow::anyhow!("No images in Nano Banana response"))?;
+
+        // For now, return the first image
+        // TODO: Support multiple images in GenerationResult
+        let first_image = images
+            .get(0)
+            .and_then(|img| img.get("generatedImage"))
+            .and_then(|data| data.as_str())
+            .ok_or_else(|| anyhow::anyhow!("No image data in response"))?;
+
+        Ok(GenerationResult {
+            output_url: None,
+            output_data: Some(first_image.to_string()), // Base64 encoded image
+            metadata: response_data,
+        })
     }
 
     /// Generate video using Veo via Gemini API
@@ -231,13 +330,17 @@ impl GenerationProvider for GoogleProvider {
 
     async fn generate(&self, request: GenerationRequest) -> Result<GenerationResult> {
         match request.model.as_str() {
+            // Nano Banana image generation models
+            "gemini-2.5-flash-image" | "gemini-3-pro-image" => {
+                self.generate_image(&request.model, &request.prompt, &request.parameters).await
+            }
             // Veo video generation models
             "veo" | "veo-2" | "veo-2.0-generate-exp" |
             "veo-3" | "veo-3.1" | "veo-3.1-generate-preview" => {
                 self.generate_video(&request.prompt, &request.parameters).await
             }
             _ => Err(anyhow::anyhow!(
-                "Unsupported Google model: {}. Use 'veo-3.1-generate-preview' for video generation.",
+                "Unsupported Google model: {}. Use 'gemini-2.5-flash-image' or 'gemini-3-pro-image' for images, or 'veo-3.1-generate-preview' for video generation.",
                 request.model
             )),
         }

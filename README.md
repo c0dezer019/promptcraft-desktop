@@ -11,7 +11,7 @@ PromptCraft Desktop is a powerful desktop application for AI prompt engineering.
 ### Core Features
 
 - 🎬 **Video Generation**: Sora and Veo prompt builders
-- 🎨 **Image Generation**: DALL-E, Grok, Midjourney, and Stable Diffusion
+- 🎨 **Image Generation**: DALL-E, Grok, Nano Banana (Gemini), Midjourney, and Stable Diffusion
 - 🔧 **ComfyUI/A1111 Support**: Visual workflow builder with node templates
 - 🌓 **Dark Mode**: Eye-friendly interface
 - 💾 **Export**: Save prompts as markdown, JSON, or workflow files
@@ -98,7 +98,7 @@ To use AI enhancement features (the enhance button):
 - MiniMax
 - Venice
 
-**Note:** The **Generation** tab is for image/video generation providers only (OpenAI, Google Veo, Grok). Text enhancement providers like Anthropic appear in the **Enhancement** tab.
+**Note:** The **Generation** tab is for image/video generation providers only (OpenAI, Google Veo/Nano Banana, Grok). Text enhancement providers like Anthropic appear in the **Enhancement** tab.
 
 For more details on the Anthropic integration, see [ANTHROPIC_INTEGRATION.md](ANTHROPIC_INTEGRATION.md).
 

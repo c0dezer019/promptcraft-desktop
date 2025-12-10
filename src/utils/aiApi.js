@@ -7,6 +7,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { getItem, setItem } from '../lib/promptcraft-ui/utils/storage.js';
 
 /**
  * Call AI via Tauri backend
@@ -22,11 +23,13 @@ import { invoke } from '@tauri-apps/api/core';
  * @returns {Promise<string>} - The generated text
  */
 export async function callAI(userPrompt, systemPrompt = '', options = {}) {
-    // Load settings from localStorage to get the configured provider
-    const settingsStr = localStorage.getItem('promptcraft_ai_settings');
-    const settings = settingsStr
-        ? JSON.parse(settingsStr)
-        : { provider: 'openai', key: '', model: '', baseUrl: '' };
+    // Load settings from storage to get the configured provider
+    const settings = await getItem('promptcraft_ai_settings', {
+        provider: 'openai',
+        key: '',
+        model: '',
+        baseUrl: '',
+    });
 
     // Provider-specific default models
     const getDefaultModel = (providerName) => {
@@ -111,5 +114,58 @@ export async function callAI(userPrompt, systemPrompt = '', options = {}) {
 
         // Generic error with original message
         throw new Error(`AI call failed: ${error.message || error}`);
+    }
+}
+
+/**
+ * Load AI settings from storage (async)
+ * This override uses the platform-agnostic storage system (Tauri Store or localStorage)
+ *
+ * @param {string} providerName - Optional provider name to load specific provider settings
+ * @returns {Promise<Object>} Settings object with { provider, key, model, baseUrl }
+ */
+export async function loadAISettings(providerName = null) {
+    if (providerName) {
+        // Load settings for a specific provider
+        const storageKey = `promptcraft_ai_settings_${providerName}`;
+        const settings = await getItem(storageKey, null);
+
+        if (settings) {
+            return settings;
+        }
+        return { provider: providerName, key: '', model: '', baseUrl: '' };
+    } else {
+        // Load the currently active provider settings
+        const settings = await getItem('promptcraft_ai_settings', null);
+
+        if (settings) {
+            return settings;
+        }
+
+        // Check for legacy Gemini key
+        const legacyKey = await getItem('promptcraft_gemini_key', null);
+        if (legacyKey) {
+            return { provider: 'gemini', key: legacyKey, model: '', baseUrl: '' };
+        }
+
+        return { provider: 'openai', key: '', model: '', baseUrl: '' };
+    }
+}
+
+/**
+ * Save AI settings to storage (async)
+ * This override uses the platform-agnostic storage system (Tauri Store or localStorage)
+ *
+ * @param {Object} settings - Settings object with { provider, key, model, baseUrl }
+ * @returns {Promise<void>}
+ */
+export async function saveAISettings(settings) {
+    // Save the main settings
+    await setItem('promptcraft_ai_settings', settings);
+
+    // Also save provider-specific settings for easy loading
+    if (settings.provider && settings.key) {
+        const providerKey = `promptcraft_ai_settings_${settings.provider}`;
+        await setItem(providerKey, settings);
     }
 }

@@ -73,22 +73,30 @@ export default function PromptCraft() {
   const { workflows, createWorkflow } = useWorkflows();
 
   // Current workflow ID (or create default workflow)
-  const [currentWorkflowId, setCurrentWorkflowId] = useState('default');
+  const [currentWorkflowId, setCurrentWorkflowId] = useState(null);
+  const [workflowInitialized, setWorkflowInitialized] = useState(false);
 
   // Initialize default workflow if needed
   useEffect(() => {
-    if (isDesktop && workflows.length === 0) {
+    if (!isDesktop || workflowInitialized) return;
+
+    if (workflows.length === 0 && !currentWorkflowId) {
       // Create a default workflow on first load
+      console.log('[App] Creating default workflow...');
       createWorkflow('Default Workflow', 'image', {}).then(workflow => {
         if (workflow) {
+          console.log('[App] Default workflow created:', workflow.id);
           setCurrentWorkflowId(workflow.id);
+          setWorkflowInitialized(true);
         }
       });
-    } else if (isDesktop && workflows.length > 0 && currentWorkflowId === 'default') {
-      // Use the first workflow if we're still on 'default'
+    } else if (workflows.length > 0 && !currentWorkflowId) {
+      // Use the first workflow if we don't have one set
+      console.log('[App] Using existing workflow:', workflows[0].id);
       setCurrentWorkflowId(workflows[0].id);
+      setWorkflowInitialized(true);
     }
-  }, [isDesktop, workflows, createWorkflow, currentWorkflowId]);
+  }, [isDesktop, workflows, currentWorkflowId, workflowInitialized, createWorkflow]);
 
   // Platform detection logging
   useEffect(() => {
@@ -98,6 +106,16 @@ export default function PromptCraft() {
       isWeb
     });
   }, [platform, isDesktop, isWeb]);
+
+  // Debug logging for workflow state
+  useEffect(() => {
+    console.log('[App] Workflow State:', {
+      currentWorkflowId,
+      workflowsCount: workflows.length,
+      workflowInitialized,
+      isDesktop
+    });
+  }, [currentWorkflowId, workflows, workflowInitialized, isDesktop]);
 
   // Dark mode effect
   useEffect(() => {

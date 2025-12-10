@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
+import { isValidImageUrl } from './urlValidator';
 
 /**
  * Download image from URL
@@ -12,6 +13,11 @@ import { writeFile } from '@tauri-apps/plugin-fs';
  */
 export async function downloadImage(url, filename = 'image.png', isDesktop = false) {
   try {
+    // Validate URL to prevent SSRF and other attacks
+    if (!isValidImageUrl(url)) {
+      throw new Error('Invalid or unsafe URL provided for download');
+    }
+
     if (isDesktop) {
       // Tauri desktop mode - use filesystem APIs
       console.log('[downloadHelper] Downloading via Tauri:', url);

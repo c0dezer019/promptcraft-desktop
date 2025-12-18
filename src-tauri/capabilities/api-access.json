@@ -7,6 +7,8 @@
     "core:window:allow-create",
     "core:window:allow-close",
     "dialog:default",
+    "fs:allow-picture-read-recursive",
+    "fs:allow-appdata-read-recursive",
     {
       "identifier": "http:default",
       "allow": [

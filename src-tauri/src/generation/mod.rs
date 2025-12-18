@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 pub mod processor;
 pub mod providers;
@@ -151,6 +152,66 @@ impl GenerationService {
             .get_provider(provider_name)
             .ok_or_else(|| anyhow::anyhow!("Provider not found: {}", provider_name))?;
 
-        provider.generate(request).await
+        let mut result = provider.generate(request).await?;
+
+        // Convert base64 output_data to file if present
+        if let Some(base64_data) = &result.output_data {
+            if !base64_data.is_empty() {
+                match save_base64_to_file(base64_data).await {
+                    Ok(file_path) => {
+                        // Convert to Tauri asset protocol URL (https://asset.localhost/...)
+                        // This format is required for Tauri v2 to load local files in the webview
+                        let file_path_str = file_path.display().to_string();
+                        result.output_url = Some(format!("asset://localhost/{}", file_path_str));
+                        // Clear the base64 data to save space
+                        result.output_data = None;
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: Failed to save base64 to file: {}", e);
+                        // Continue with base64 data in output_data
+                    }
+                }
+            }
+        }
+
+        Ok(result)
     }
+}
+
+/// Save base64 image data to a file and return the path
+async fn save_base64_to_file(base64_data: &str) -> Result<PathBuf> {
+    use base64::{Engine as _, engine::general_purpose};
+
+    // Strip data URL prefix if present (e.g., "data:image/png;base64,")
+    let base64_only = if let Some(comma_pos) = base64_data.find(',') {
+        &base64_data[comma_pos + 1..]
+    } else {
+        base64_data
+    };
+
+    // Strip whitespace and newlines from base64 data
+    let cleaned_data: String = base64_only
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect();
+
+    // Decode base64
+    let image_bytes = general_purpose::STANDARD.decode(&cleaned_data)?;
+
+    // Get Pictures/Promptcraft directory
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| anyhow::anyhow!("Could not get home directory"))?;
+
+    let images_dir = home_dir.join("Pictures").join("Promptcraft");
+    std::fs::create_dir_all(&images_dir)?;
+
+    // Generate unique filename with random UUID to avoid collisions
+    let uuid = uuid::Uuid::new_v4();
+    let filename = format!("gen_{}.png", uuid);
+    let file_path = images_dir.join(filename);
+
+    // Write to file using tokio for async I/O
+    tokio::fs::write(&file_path, &image_bytes).await?;
+
+    Ok(file_path)
 }

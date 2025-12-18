@@ -15,11 +15,18 @@
       {
         "title": "PromptCraft Desktop",
         "width": 1400,
-        "height": 900
+        "height": 900,
+        "skipTaskbar": false,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' ipc: http://ipc.localhost asset: https://asset.localhost; img-src 'self' asset: https://asset.localhost data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/.local/share/com.brian.desktop/**", "$HOME/Pictures/Promptcraft/**"]
+      },
       "capabilities": [
         {
           "identifier": "main-capability",

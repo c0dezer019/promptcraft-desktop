@@ -17,6 +17,7 @@ pub struct A1111Provider {
 }
 
 impl A1111Provider {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             config: None,

@@ -19,6 +19,7 @@ pub struct ComfyUIProvider {
 }
 
 impl ComfyUIProvider {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             config: None,

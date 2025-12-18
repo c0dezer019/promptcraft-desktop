@@ -23,7 +23,7 @@ struct AnthropicResponse {
 #[derive(Debug, Deserialize)]
 struct ContentBlock {
     #[serde(rename = "type")]
-    block_type: String,
+    _block_type: String,
     text: Option<String>,
 }
 

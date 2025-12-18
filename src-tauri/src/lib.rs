@@ -25,12 +25,17 @@ pub fn run() {
             // Initialize database and generation service synchronously in setup
             let app_handle = app.handle().clone();
             tauri::async_runtime::block_on(async move {
+                eprintln!("[Setup] Starting database initialization...");
                 // Initialize database
                 let db = match init_database(&app_handle).await {
-                    Ok(db) => db,
+                    Ok(db) => {
+                        eprintln!("[Setup] Database initialized successfully");
+                        db
+                    },
                     Err(e) => {
-                        eprintln!("Failed to initialize database: {}", e);
-                        return;
+                        eprintln!("[Setup] FAILED to initialize database: {}", e);
+                        eprintln!("[Setup] Error details: {:?}", e);
+                        panic!("Cannot continue without database: {}", e);
                     }
                 };
 
@@ -56,6 +61,7 @@ pub fn run() {
             commands::delete_workflow,
             commands::create_scene,
             commands::list_scenes,
+            commands::list_all_scenes,
             commands::delete_scene,
             commands::create_job,
             commands::get_job,
@@ -76,6 +82,7 @@ pub fn run() {
 }
 
 async fn init_database(app: &tauri::AppHandle) -> anyhow::Result<db::Database> {
+    eprintln!("[init_database] Function called");
     // Check for snap environment first, fallback to home directory
     let app_data_dir = if let Ok(snap_user_common) = std::env::var("SNAP_USER_COMMON") {
         // Use snap's unversioned user data directory (persists across updates)

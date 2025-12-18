@@ -47,13 +47,6 @@ impl GoogleProvider {
         // Number of images to generate
         let n = params.get("n").and_then(|v| v.as_u64()).unwrap_or(1);
 
-        // Aspect ratio: 1:1, 16:9, 9:16, 4:3, 3:4, 21:9
-        let aspect_ratio = params
-            .get("aspect_ratio")
-            .or_else(|| params.get("aspectRatio"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("1:1");
-
         // Resolution (for Gemini 3 Pro Image only): 1K, 2K, 4K
         let resolution = params
             .get("resolution")
@@ -61,8 +54,8 @@ impl GoogleProvider {
 
         // Build the request body
         let mut generation_config = serde_json::json!({
-            "responseCount": n,
-            "aspectRatio": aspect_ratio,
+            "candidateCount": n,
+            "responseModalities": ["IMAGE"]
         });
 
         // Add resolution for Gemini 3 Pro Image
@@ -83,7 +76,7 @@ impl GoogleProvider {
 
         // Use the Gemini API endpoint
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateImages",
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
             model
         );
 
@@ -110,23 +103,42 @@ impl GoogleProvider {
         let response_data: serde_json::Value = response.json().await?;
 
         // Extract image data from response
-        // The API returns base64-encoded images in the "images" array
-        let images = response_data
-            .get("images")
-            .and_then(|imgs| imgs.as_array())
-            .ok_or_else(|| anyhow::anyhow!("No images in Nano Banana response"))?;
+        // The Gemini API returns images in candidates[].content.parts[] with inline_data.data
+        let candidates = response_data
+            .get("candidates")
+            .and_then(|c| c.as_array())
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No candidates in Gemini response. Full response: {}",
+                    serde_json::to_string_pretty(&response_data).unwrap_or_default()
+                )
+            })?;
 
-        // For now, return the first image
-        // TODO: Support multiple images in GenerationResult
-        let first_image = images
+        // Get the first candidate
+        let first_candidate = candidates
             .get(0)
-            .and_then(|img| img.get("generatedImage"))
-            .and_then(|data| data.as_str())
-            .ok_or_else(|| anyhow::anyhow!("No image data in response"))?;
+            .ok_or_else(|| anyhow::anyhow!("No candidates in response"))?;
+
+        // Extract the image from content.parts[]
+        let parts = first_candidate
+            .get("content")
+            .and_then(|c| c.get("parts"))
+            .and_then(|p| p.as_array())
+            .ok_or_else(|| anyhow::anyhow!("No content.parts in candidate"))?;
+
+        // Find the first part with inlineData (the generated image)
+        let image_data = parts
+            .iter()
+            .find_map(|part| {
+                part.get("inlineData")
+                    .and_then(|inline| inline.get("data"))
+                    .and_then(|data| data.as_str())
+            })
+            .ok_or_else(|| anyhow::anyhow!("No inlineData.data found in response parts"))?;
 
         Ok(GenerationResult {
             output_url: None,
-            output_data: Some(first_image.to_string()), // Base64 encoded image
+            output_data: Some(image_data.to_string()), // Base64 encoded image
             metadata: response_data,
         })
     }

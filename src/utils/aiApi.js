@@ -51,8 +51,12 @@ export async function callAI(userPrompt, systemPrompt = '', options = {}) {
         temperature = 1.0,
     } = options;
 
+    // Load provider-specific settings to get the API key
+    const providerSettings = await getItem(`promptcraft_ai_settings_${provider}`, null);
+    const apiKey = providerSettings?.key || settings.key;
+
     // Check if API key is configured
-    if (!settings.key && provider === settings.provider) {
+    if (!apiKey) {
         throw new Error(
             `No API key configured for ${provider}. Please configure it in Settings → Enhancement tab.`
         );

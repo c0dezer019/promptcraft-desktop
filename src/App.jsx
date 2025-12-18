@@ -26,6 +26,9 @@ import { DEFAULT_MODELS } from './constants/models.js';
 
 // Utilities
 import { hasAnyConfiguredTool } from './utils/localToolConfig.js';
+import { loadAISettings } from './utils/aiApi.js';
+import { invoke } from '@tauri-apps/api/core';
+import { getItem } from './lib/promptcraft-ui/utils/storage.js';
 
 /**
  * Main PromptCraft Application
@@ -97,6 +100,50 @@ export default function PromptCraft() {
       setWorkflowInitialized(true);
     }
   }, [isDesktop, workflows, currentWorkflowId, workflowInitialized, createWorkflow]);
+
+  // Sync API keys to backend on startup (desktop only)
+  useEffect(() => {
+    if (!isDesktop) return;
+
+    const syncAPIKeys = async () => {
+      // Sync enhancement provider API keys
+      const enhancementProviders = ['anthropic', 'openai', 'gemini', 'minimax', 'venice'];
+
+      for (const providerName of enhancementProviders) {
+        try {
+          const settings = await loadAISettings(providerName);
+          if (settings && settings.key) {
+            console.log(`[App] Syncing ${providerName} enhancement API key to backend`);
+            await invoke('configure_provider', {
+              provider: providerName,
+              apiKey: settings.key,
+            });
+          }
+        } catch (error) {
+          console.error(`[App] Failed to sync ${providerName} enhancement API key:`, error);
+        }
+      }
+
+      // Sync generation provider API keys
+      try {
+        const genSettings = await getItem('generation_providers', {});
+
+        for (const [providerName, config] of Object.entries(genSettings)) {
+          if (config.enabled && config.apiKey) {
+            console.log(`[App] Syncing ${providerName} generation API key to backend`);
+            await invoke('configure_provider', {
+              provider: providerName,
+              apiKey: config.apiKey,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[App] Failed to sync generation provider API keys:', error);
+      }
+    };
+
+    syncAPIKeys();
+  }, [isDesktop]);
 
   // Platform detection logging
   useEffect(() => {

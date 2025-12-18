@@ -37,8 +37,8 @@ export function useJobs(workflowId) {
     try {
       const job = await invoke('create_job', {
         input: {
-          workflowId,
-          sceneId,
+          workflow_id: workflowId,
+          scene_id: sceneId,
           type,
           data
         }

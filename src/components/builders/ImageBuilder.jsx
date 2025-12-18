@@ -129,6 +129,7 @@ const StandardImageBuilder = ({
 }) => {
   const modelConfig = getModelById(model);
   const provider = getModelProvider(model);
+  const modelName = modelConfig?.name || model;
   const isOpenAIImage = provider === 'openai';
   const isComfy = model === 'comfy';
   const isA1111 = model === 'a1111';
@@ -457,7 +458,7 @@ const StandardImageBuilder = ({
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Generate with {getProviderDisplayName(provider)}
+                    Generate with {modelName}
                   </>
                 )}
               </button>
@@ -569,31 +570,39 @@ const StatusBadge = ({ status }) => {
 const ResultDisplay = ({ result }) => {
   const resultData = typeof result === 'string' ? JSON.parse(result) : result;
 
-  if (resultData.output_url) {
+  // Handle both URL-based output (DALL-E, Grok, etc.) and base64 output (Gemini)
+  const imageSource = resultData.output_url ||
+    (resultData.output_data ? `data:image/png;base64,${resultData.output_data}` : null);
+
+  if (imageSource) {
     return (
       <div className="relative group">
         <img
-          src={resultData.output_url}
+          src={imageSource}
           alt="Generated content"
           className="w-full rounded-lg border border-white/10"
         />
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <a
-            href={resultData.output_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors"
-          >
-            Open Full Size
-          </a>
-          <a
-            href={resultData.output_url}
-            download
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
-          >
-            <Download className="w-3 h-3" />
-            Download
-          </a>
+          {resultData.output_url && (
+            <a
+              href={resultData.output_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors"
+            >
+              Open Full Size
+            </a>
+          )}
+          {resultData.output_url && (
+            <a
+              href={resultData.output_url}
+              download
+              className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
+            >
+              <Download className="w-3 h-3" />
+              Download
+            </a>
+          )}
         </div>
       </div>
     );
@@ -610,11 +619,15 @@ const ResultDisplay = ({ result }) => {
 const CompletedJobCard = ({ job }) => {
   const result = job.result ? (typeof job.result === 'string' ? JSON.parse(job.result) : job.result) : null;
 
+  // Handle both URL-based output (DALL-E, Grok, etc.) and base64 output (Gemini)
+  const imageSource = result?.output_url ||
+    (result?.output_data ? `data:image/png;base64,${result.output_data}` : null);
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-lg p-2 hover:bg-white/10 transition-colors cursor-pointer">
-      {result?.output_url ? (
+      {imageSource ? (
         <img
-          src={result.output_url}
+          src={imageSource}
           alt="Generation"
           className="w-full aspect-square object-cover rounded"
         />

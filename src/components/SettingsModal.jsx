@@ -15,6 +15,7 @@ import { usePlatform } from '../lib/promptcraft-ui/hooks/usePlatform.js';
 import { HardDrive } from 'lucide-react';
 import LocalToolSetup from './features/LocalToolSetup';
 import { invoke } from '@tauri-apps/api/core';
+import { getItem, setItem } from '../lib/promptcraft-ui/utils/storage.js';
 
 /**
  * SettingsModal Component - AI Provider Configuration
@@ -79,10 +80,8 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
                         venice: veniceSettings.key || '',
                     });
 
-                    // Load generation settings
-                    const genSettings = JSON.parse(
-                        localStorage.getItem('generation_providers') || '{}'
-                    );
+                    // Load generation settings (using storage system for Tauri compatibility)
+                    const genSettings = await getItem('generation_providers', {});
                     setGenProviders({
                         openai: genSettings.openai || { enabled: false, apiKey: '' },
                         google: genSettings.google || { enabled: false, apiKey: '' },
@@ -145,11 +144,8 @@ export const SettingsModal = ({ isOpen, onClose, initialTab = null }) => {
     };
 
     const handleGenSave = async () => {
-        // Save to localStorage
-        localStorage.setItem(
-            'generation_providers',
-            JSON.stringify(genProviders)
-        );
+        // Save to storage (Tauri Store or localStorage)
+        await setItem('generation_providers', genProviders);
 
         // If in desktop mode, send to Tauri backend
         if (isDesktop) {

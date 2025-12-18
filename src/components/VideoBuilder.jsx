@@ -43,6 +43,7 @@ export const VideoBuilder = ({
   // Derive provider from model
   const modelConfig = getModelById(model);
   const provider = getModelProvider(model);
+  const modelName = modelConfig?.name || model;
   const isSora = provider === 'openai';
 
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -257,7 +258,7 @@ export const VideoBuilder = ({
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Generate with {getProviderDisplayName(provider)}
+                  Generate with {modelName}
                 </>
               )}
             </button>

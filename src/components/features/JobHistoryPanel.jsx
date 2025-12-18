@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Filter, Download, Trash2, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Eye } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { useJobPolling } from '../../lib/promptcraft-ui/hooks/useJobPolling';
 import { downloadJobResult } from '../../utils/downloadHelper';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform';
 import JobDetailModal from './JobDetailModal';
 import { isValidImageUrl } from '../../utils/urlValidator';
+import { convertToAssetUrl } from '../../utils/fileUrlHelper';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -38,17 +40,31 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop }) => {
+const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreload }) => {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
   const jobResult = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
 
+  // Trigger preload on hover
+  const handleMouseEnter = () => {
+    if (onPreload) {
+      onPreload(job);
+    }
+  };
+
   // Validate the output URL to prevent XSS
   const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
     ? jobResult.output_url
     : null;
+
+  // Handle base64 output_data (for providers like Gemini that return inline data)
+  const base64Data = jobResult?.output_data;
+  const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
+
+  // Convert file:// URLs to Tauri asset protocol URLs
+  const imageSource = isDesktop && rawImageSource ? convertToAssetUrl(rawImageSource) : rawImageSource;
 
   const handleDownload = async (e) => {
     e.stopPropagation();
@@ -65,7 +81,18 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop }) => {
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this job?')) return;
+    e.preventDefault();
+
+    // Don't allow multiple deletes
+    if (deleting) return;
+
+    // Use Tauri's dialog API for proper confirmation
+    const confirmed = await ask('Are you sure you want to delete this job?', {
+      title: 'Confirm Delete',
+      kind: 'warning'
+    });
+
+    if (!confirmed) return;
 
     try {
       setDeleting(true);
@@ -82,13 +109,14 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop }) => {
   return (
     <div
       onClick={() => onViewDetails(job)}
+      onMouseEnter={handleMouseEnter}
       className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
     >
       {/* Image Preview */}
-      {safeOutputUrl && (
+      {imageSource && (
         <div className="aspect-square relative overflow-hidden rounded-t-lg">
           <img
-            src={safeOutputUrl}
+            src={imageSource}
             alt="Generation result"
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
@@ -169,6 +197,32 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
   const [providerFilter, setProviderFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const preloadedImages = React.useRef(new Set());
+
+  // Preload job details on hover
+  const handlePreload = React.useCallback((job) => {
+    // Parse job result to get image
+    const jobResult = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
+
+    // Validate the output URL
+    const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
+      ? jobResult.output_url
+      : null;
+
+    // Handle base64 output_data
+    const base64Data = jobResult?.output_data;
+    const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
+
+    // Convert file:// URLs to Tauri asset protocol URLs
+    const imageSource = isDesktop && rawImageSource ? convertToAssetUrl(rawImageSource) : rawImageSource;
+
+    // Preload image if we haven't already
+    if (imageSource && !preloadedImages.current.has(job.id)) {
+      const img = new Image();
+      img.src = imageSource;
+      preloadedImages.current.add(job.id);
+    }
+  }, [isDesktop]);
 
   // Load all jobs (across all workflows if workflowId is null)
   const loadJobs = async () => {
@@ -261,8 +315,14 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
   };
 
   const handleViewDetails = (job) => {
+    console.time('[JobHistory] Modal open time');
+    console.log('[JobHistory] Setting selected job:', job.id);
     setSelectedJob(job);
     setShowDetailModal(true);
+    // Use setTimeout to measure after state update
+    setTimeout(() => {
+      console.timeEnd('[JobHistory] Modal open time');
+    }, 0);
   };
 
   const handleRetry = async (job) => {
@@ -385,6 +445,7 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
                     job={job}
                     onViewDetails={handleViewDetails}
                     onDelete={handleJobDeleted}
+                    onPreload={handlePreload}
                     isDesktop={isDesktop}
                   />
                 ))}

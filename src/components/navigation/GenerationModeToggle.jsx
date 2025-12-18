@@ -6,7 +6,7 @@ import { Cloud, HardDrive } from 'lucide-react';
  */
 export const GenerationModeToggle = ({ mode, onChange }) => {
   return (
-    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+    <div className="flex gap-1 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
       <button
         onClick={() => onChange('cloud')}
         className={`

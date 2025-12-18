@@ -102,16 +102,89 @@ export function getJobFilename(job) {
 }
 
 /**
+ * Download base64 image data
+ *
+ * @param {string} base64Data - Base64 encoded image data
+ * @param {string} filename - Suggested filename
+ * @param {boolean} isDesktop - Whether running in Tauri desktop mode
+ */
+export async function downloadBase64Image(base64Data, filename = 'image.png', isDesktop = false) {
+  try {
+    // Convert base64 to blob
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+
+    if (isDesktop) {
+      // Tauri desktop mode - use filesystem APIs
+      console.log('[downloadHelper] Downloading base64 image via Tauri');
+
+      // Show save dialog
+      const filePath = await save({
+        defaultPath: filename,
+        filters: [
+          {
+            name: 'Image',
+            extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif']
+          }
+        ]
+      });
+
+      if (!filePath) {
+        console.log('[downloadHelper] Download cancelled by user');
+        return false;
+      }
+
+      // Write file
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      await writeFile(filePath, uint8Array);
+      console.log('[downloadHelper] File saved to:', filePath);
+      return true;
+    } else {
+      // Web mode - use browser download
+      console.log('[downloadHelper] Downloading base64 image via browser');
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Cleanup
+      URL.revokeObjectURL(blobUrl);
+      return true;
+    }
+  } catch (error) {
+    console.error('[downloadHelper] Base64 download failed:', error);
+    throw error;
+  }
+}
+
+/**
  * Download job result
  *
  * @param {Object} job - Job object with result
  * @param {boolean} isDesktop - Whether running in Tauri desktop mode
  */
 export async function downloadJobResult(job, isDesktop = false) {
-  if (!job.result?.output_url) {
-    throw new Error('No output URL available for download');
+  const filename = getJobFilename(job);
+
+  // Handle base64 output_data (e.g., from Gemini)
+  if (job.result?.output_data) {
+    return downloadBase64Image(job.result.output_data, filename, isDesktop);
   }
 
-  const filename = getJobFilename(job);
-  return downloadImage(job.result.output_url, filename, isDesktop);
+  // Handle URL-based output (e.g., from DALL-E, Grok)
+  if (job.result?.output_url) {
+    return downloadImage(job.result.output_url, filename, isDesktop);
+  }
+
+  throw new Error('No output URL or data available for download');
 }

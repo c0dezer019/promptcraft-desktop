@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Download, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '../../../lib/promptcraft-ui';
 import { SceneRelations } from './SceneRelations';
+import { convertToAssetUrl } from '../../../utils/fileUrlHelper';
+import { usePlatform } from '../../../lib/promptcraft-ui/hooks/usePlatform';
 
 /**
  * SceneDetailModal - Expanded CivitAI-style view for scene details
  * Displays: full image, prompts, settings, metadata, variations, sequences
  */
 export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick }) {
+  const { isDesktop } = usePlatform();
   const [jobs, setJobs] = useState([]);
   const [selectedJobIndex, setSelectedJobIndex] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -36,7 +40,14 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
   // Get current job/generation
   const currentJob = jobs[selectedJobIndex];
   const jobResult = currentJob?.result ? JSON.parse(currentJob.result) : null;
-  const outputUrl = jobResult?.output_url || thumbnail;
+
+  // Handle both URL-based output (DALL-E, Grok, etc.) and base64 output (Gemini)
+  const rawOutputUrl = jobResult?.output_url ||
+    (jobResult?.output_data ? `data:image/png;base64,${jobResult.output_data}` : null) ||
+    thumbnail;
+
+  // Convert file:// URLs to Tauri asset protocol URLs
+  const outputUrl = isDesktop && rawOutputUrl ? convertToAssetUrl(rawOutputUrl) : rawOutputUrl;
 
   // Copy to clipboard helper
   const copyToClipboard = async (text, field) => {
@@ -56,11 +67,22 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
   };
 
   // Handle delete
-  const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      await onDelete(id);
-      onClose();
+  const handleDelete = async (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
     }
+
+    // Use Tauri's dialog API for proper confirmation
+    const confirmed = await ask(`Are you sure you want to delete "${name}"?`, {
+      title: 'Confirm Delete',
+      kind: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    await onDelete(id);
+    onClose();
   };
 
   const CategoryIcon = category === 'video' ? Video : ImageIcon;

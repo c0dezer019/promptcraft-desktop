@@ -107,11 +107,11 @@ export const ModelSelector = ({ category, value, onChange }) => {
           }
         `}
       >
-        <span className="text-sm font-medium text-gray-900 dark:text-white min-w-[100px] text-left">
+        <span className="text-sm font-medium text-gray-900 dark:text-white min-w-[100px] text-left truncate max-w-[100px] xl:max-w-none">
           {selectedModel?.name || 'Select Model'}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 

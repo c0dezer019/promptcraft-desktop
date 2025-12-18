@@ -27,9 +27,9 @@ export const TopNav = ({
 }) => {
   return (
     <header className="h-16 border-b border-gray-200 dark:border-gray-700 fixed w-full top-0 z-30 bg-white dark:bg-gray-900 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
-      <div className="flex items-center justify-between h-full px-4 max-w-screen-2xl mx-auto">
+      <div className="flex items-center justify-between h-full px-2 sm:px-4 max-w-screen-2xl mx-auto gap-2 lg:gap-4">
         {/* Left: Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
           <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
             <Palette className="w-5 h-5 text-white" />
           </div>
@@ -38,8 +38,8 @@ export const TopNav = ({
           </span>
         </div>
 
-        {/* Center: Tab Bar + Generation Mode Toggle */}
-        <div className="flex items-center gap-4">
+        {/* Center: Tab Bar + Generation Mode Toggle + Model Selector */}
+        <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
           <TabBar
             activeCategory={activeCategory}
             onChange={setActiveCategory}
@@ -48,10 +48,6 @@ export const TopNav = ({
             mode={generationMode}
             onChange={setGenerationMode}
           />
-        </div>
-
-        {/* Right: Model Selector + Actions */}
-        <div className="flex items-center gap-2">
           {generationMode === 'cloud' ? (
             <ModelSelector
               category={activeCategory}
@@ -64,6 +60,10 @@ export const TopNav = ({
               onChange={setSelectedLocalModel}
             />
           )}
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
 
           {/* Scene Manager Button */}
           <button

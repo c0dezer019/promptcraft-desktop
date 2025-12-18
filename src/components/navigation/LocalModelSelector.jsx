@@ -80,15 +80,15 @@ export const LocalModelSelector = ({ value, onChange }) => {
           ${loading || error ? 'opacity-50 cursor-not-allowed' : ''}
         `}>
                 {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-500 flex-shrink-0" />
                 ) : error ? (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                 ) : null}
-                <span className="text-sm font-medium text-gray-900 dark:text-white min-w-[120px] text-left">
+                <span className="text-sm font-medium text-gray-900 dark:text-white min-w-[120px] text-left truncate max-w-[120px] xl:max-w-none">
                     {error ? 'Connection Error' : displayName}
                 </span>
                 <ChevronDown
-                    className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
                 />
             </button>
 

@@ -37,7 +37,7 @@ export function useScenes(workflowId) {
     try {
       const scene = await invoke('create_scene', {
         input: {
-          workflowId,
+          workflow_id: workflowId,
           name,
           data,
           thumbnail

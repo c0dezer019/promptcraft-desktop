@@ -35,6 +35,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenS
 
   const provider = 'grok';
   const model = 'grok-2-image';
+  const modelName = 'Grok Aurora';
 
   const handleAddBadge = () => {
     if (newBadge.trim()) {
@@ -173,7 +174,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenS
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Generate with {getProviderDisplayName(provider)}
+                  Generate with {modelName}
                 </>
               )}
             </button>

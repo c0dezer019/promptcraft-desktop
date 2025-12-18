@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Grid3x3, List, Filter, X, Plus, Image as ImageIcon, Video, Sparkles } from 'lucide-react';
 import { Button, Input } from '../../lib/promptcraft-ui';
-import { useScenes } from '../../hooks/useScenes';
+import { invoke } from '@tauri-apps/api/core';
+import { usePlatform } from '../../lib/promptcraft-ui';
 import { SceneCard } from './scenes/SceneCard';
 import { SceneDetailModal } from './scenes/SceneDetailModal';
 
@@ -10,7 +11,10 @@ import { SceneDetailModal } from './scenes/SceneDetailModal';
  * Features: grid view, search, filtering, detail modal
  */
 export function SceneManager({ onLoadScene, onClose }) {
-  const { scenes, loading, error, deleteScene, getSceneJobs } = useScenes();
+  const { isDesktop } = usePlatform();
+  const [scenes, setScenes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedScene, setSelectedScene] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -20,6 +24,62 @@ export function SceneManager({ onLoadScene, onClose }) {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
+  // Load all scenes from all workflows
+  const loadScenes = useCallback(async () => {
+    if (!isDesktop) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await invoke('list_all_scenes');
+
+      // Parse JSON data field for each scene
+      const parsedScenes = data.map(scene => ({
+        ...scene,
+        data: typeof scene.data === 'string' ? JSON.parse(scene.data) : scene.data,
+      }));
+
+      setScenes(parsedScenes);
+    } catch (err) {
+      console.error('Failed to load scenes:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [isDesktop]);
+
+  // Delete a scene
+  const deleteScene = useCallback(async (id) => {
+    if (!isDesktop) return;
+
+    try {
+      await invoke('delete_scene', { id });
+      setScenes(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      console.error('Failed to delete scene:', err);
+      throw err;
+    }
+  }, [isDesktop]);
+
+  // Get jobs for a scene (stub - not implemented yet)
+  const getSceneJobs = useCallback(async (sceneId) => {
+    if (!isDesktop) return [];
+
+    try {
+      const jobs = await invoke('list_jobs', { workflowId: 'default' });
+      return jobs.filter(job => job.scene_id === sceneId);
+    } catch (err) {
+      console.error('Failed to get scene jobs:', err);
+      return [];
+    }
+  }, [isDesktop]);
+
+  // Load scenes on mount
+  useEffect(() => {
+    loadScenes();
+  }, [loadScenes]);
 
   // Get unique models and tags from scenes
   const { availableModels, availableTags } = useMemo(() => {
@@ -99,6 +159,15 @@ export function SceneManager({ onLoadScene, onClose }) {
   };
 
   const hasActiveFilters = searchQuery || filters.category || filters.model || filters.tags.length > 0;
+
+  // Auto-refresh scenes every 5 seconds to pick up new scenes created elsewhere
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadScenes();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [loadScenes]);
 
   return (
     <div className="fixed inset-0 z-40 bg-white dark:bg-gray-900">

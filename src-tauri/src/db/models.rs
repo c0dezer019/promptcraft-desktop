@@ -47,6 +47,7 @@ pub struct Scene {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CreateSceneInput {
     pub workflow_id: String,
     pub name: String,
@@ -72,6 +73,7 @@ pub struct Job {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CreateJobInput {
     pub workflow_id: String,
     pub scene_id: Option<String>,

@@ -131,6 +131,16 @@ impl SceneOps {
         Ok(scenes)
     }
 
+    pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Scene>> {
+        let scenes = sqlx::query_as::<_, Scene>(
+            "SELECT * FROM scenes ORDER BY created_at DESC",
+        )
+        .fetch_all(pool)
+        .await?;
+
+        Ok(scenes)
+    }
+
     pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM scenes WHERE id = ?")
             .bind(id)

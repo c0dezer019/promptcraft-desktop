@@ -71,6 +71,13 @@ pub async fn list_scenes(
 }
 
 #[tauri::command]
+pub async fn list_all_scenes(db: State<'_, Database>) -> Result<Vec<Scene>, String> {
+    SceneOps::list_all(db.pool())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn delete_scene(db: State<'_, Database>, id: String) -> Result<(), String> {
     SceneOps::delete(db.pool(), &id)
         .await

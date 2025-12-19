@@ -102,6 +102,7 @@ impl GrokProvider {
         Ok(GenerationResult {
             output_url,
             output_data,
+            file_path: None,
             metadata: response_data,
         })
     }

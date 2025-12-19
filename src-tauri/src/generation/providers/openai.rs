@@ -108,6 +108,7 @@ impl OpenAIProvider {
         Ok(GenerationResult {
             output_url,
             output_data,
+            file_path: None,
             metadata: response_data,
         })
     }
@@ -237,6 +238,7 @@ impl OpenAIProvider {
                     return Ok(GenerationResult {
                         output_url,
                         output_data: None,
+                        file_path: None,
                         metadata: response_data,
                     });
                 }

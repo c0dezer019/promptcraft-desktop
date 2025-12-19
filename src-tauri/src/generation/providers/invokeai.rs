@@ -124,6 +124,7 @@ impl InvokeAIProvider {
         Ok(GenerationResult {
             output_url: image_url,
             output_data: image_data,
+            file_path: None,
             metadata: serde_json::json!({
                 "provider": "invokeai",
                 "parameters": {

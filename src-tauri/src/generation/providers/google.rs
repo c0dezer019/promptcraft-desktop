@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::super::{GenerationProvider, GenerationRequest, GenerationResult};
+use crate::generation::utils::extract_reference_image;
 
 /// Google AI configuration (for Veo video generation and Nano Banana image generation)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,11 +66,25 @@ impl GoogleProvider {
             }
         }
 
+        // Build parts array for the request
+        let mut parts = vec![serde_json::json!({
+            "text": prompt
+        })];
+
+        // Add reference image if present
+        if let Some((mime_type, base64_data)) = extract_reference_image(params) {
+            eprintln!("Adding reference image to Gemini request (MIME: {})", mime_type);
+            parts.push(serde_json::json!({
+                "inlineData": {
+                    "mimeType": mime_type,
+                    "data": base64_data
+                }
+            }));
+        }
+
         let request_body = serde_json::json!({
             "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
+                "parts": parts
             }],
             "generationConfig": generation_config
         });
@@ -139,6 +154,7 @@ impl GoogleProvider {
         Ok(GenerationResult {
             output_url: None,
             output_data: Some(image_data.to_string()), // Base64 encoded image
+            file_path: None,
             metadata: response_data,
         })
     }
@@ -311,6 +327,7 @@ impl GoogleProvider {
                 return Ok(GenerationResult {
                     output_url,
                     output_data: None,
+                    file_path: None,
                     metadata: response_data,
                 });
             }

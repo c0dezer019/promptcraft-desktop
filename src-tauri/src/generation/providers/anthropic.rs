@@ -117,6 +117,7 @@ impl AnthropicProvider {
         Ok(GenerationResult {
             output_url: None,
             output_data: Some(text),
+            file_path: None,
             metadata: serde_json::json!({
                 "id": response_data.id,
                 "model": response_data.model,

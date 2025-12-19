@@ -7,12 +7,14 @@ The Scene Manager is a comprehensive system for managing AI generation scenes in
 ## Features
 
 ### 1. **Tiled Grid View**
+
 - Beautiful grid layout displaying scene thumbnails
 - Overlay information: title, model, size, generation count
 - Hover effects showing tags and creation date
 - Responsive design with multiple column layouts
 
 ### 2. **Advanced Search & Filtering**
+
 - Full-text search across scene names, prompts, and tags
 - Filter by category (Images/Videos)
 - Filter by AI model
@@ -20,6 +22,7 @@ The Scene Manager is a comprehensive system for managing AI generation scenes in
 - Clear active filters with one click
 
 ### 3. **Detailed Scene View (CivitAI-style)**
+
 - Full-size image/video display
 - Complete prompt information (main, negative, enhancers)
 - Generation settings and parameters
@@ -28,12 +31,14 @@ The Scene Manager is a comprehensive system for managing AI generation scenes in
 - Multiple generations per scene with navigation
 
 ### 4. **Variations & Sequences**
+
 - **Variations**: Create alternative versions of a scene
 - **Sequences**: Organize scenes into timelines (before/after shots)
 - Visual relationship display in detail modal
 - Easy navigation between related scenes
 
 ### 5. **Scene Actions**
+
 - **Load Scene**: Restore prompt and settings to builder
 - **Delete Scene**: Remove scene from database
 - **Copy Prompts**: Copy individual prompt fields to clipboard
@@ -158,7 +163,7 @@ await createScene("Battle - Aftermath", {
 
 ## Component Architecture
 
-```
+```text
 SceneManager (src/components/features/SceneManager.jsx)
 ├── useScenes hook (src/hooks/useScenes.js)
 ├── SceneCard (src/components/features/scenes/SceneCard.jsx)
@@ -270,6 +275,7 @@ CREATE TABLE scenes (
 ```
 
 Tauri commands used:
+
 - `create_scene` - Create new scene
 - `list_scenes` - Load all scenes for workflow
 - `delete_scene` - Delete scene by ID
@@ -278,6 +284,7 @@ Tauri commands used:
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Auto-save**: Automatically create scenes from successful generations
 2. **Scene Collections**: Group scenes into folders/projects
 3. **Batch Operations**: Select and delete multiple scenes
@@ -285,9 +292,9 @@ Tauri commands used:
 5. **Scene Comparison**: Side-by-side view of variations
 6. **Smart Tags**: AI-powered tag suggestions
 7. **Version Control**: Track prompt iterations
-8. **Collaboration**: Share scenes with team members
 
 ### Backend Additions Needed
+
 1. `update_scene` Tauri command for editing scenes
 2. Scene search indexing for better performance
 3. Thumbnail generation pipeline
@@ -305,6 +312,7 @@ Tauri commands used:
 ## Styling
 
 The Scene Manager follows PromptCraft's design system:
+
 - **Colors**: Indigo/Purple gradients for primary actions
 - **Dark Mode**: Full support with tailwind dark: classes
 - **Responsive**: Mobile-first design with breakpoints

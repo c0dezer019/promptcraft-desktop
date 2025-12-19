@@ -141,6 +141,52 @@ impl SceneOps {
         Ok(scenes)
     }
 
+    pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<Scene>> {
+        let scene = sqlx::query_as::<_, Scene>("SELECT * FROM scenes WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
+
+        Ok(scene)
+    }
+
+    pub async fn update(
+        pool: &SqlitePool,
+        id: &str,
+        input: UpdateSceneInput,
+    ) -> Result<Scene> {
+        if let Some(name) = input.name {
+            sqlx::query("UPDATE scenes SET name = ? WHERE id = ?")
+                .bind(&name)
+                .bind(id)
+                .execute(pool)
+                .await?;
+        }
+
+        if let Some(data) = input.data {
+            let data_str = serde_json::to_string(&data)?;
+            sqlx::query("UPDATE scenes SET data = ? WHERE id = ?")
+                .bind(&data_str)
+                .bind(id)
+                .execute(pool)
+                .await?;
+        }
+
+        if let Some(thumbnail) = input.thumbnail {
+            sqlx::query("UPDATE scenes SET thumbnail = ? WHERE id = ?")
+                .bind(&thumbnail)
+                .bind(id)
+                .execute(pool)
+                .await?;
+        }
+
+        let scene = Self::get(pool, id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Scene not found"))?;
+
+        Ok(scene)
+    }
+
     pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM scenes WHERE id = ?")
             .bind(id)

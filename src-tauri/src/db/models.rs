@@ -55,6 +55,13 @@ pub struct CreateSceneInput {
     pub thumbnail: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateSceneInput {
+    pub name: Option<String>,
+    pub data: Option<serde_json::Value>,
+    pub thumbnail: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Job {
     pub id: String,

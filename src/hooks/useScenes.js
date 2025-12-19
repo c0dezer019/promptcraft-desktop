@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { usePlatform } from '../lib/promptcraft-ui';
 import { invoke } from '@tauri-apps/api/core';
+import { getModelProvider } from '../constants/models';
 
 /**
  * Custom hook for managing scenes (generation history with metadata)
  * Integrates with Tauri backend SQLite database
+ * @param {string} workflowId - Workflow ID to load scenes for, or 'all' to load all scenes
  */
 export function useScenes(workflowId = 'default') {
   const { isDesktop } = usePlatform();
@@ -13,7 +15,7 @@ export function useScenes(workflowId = 'default') {
   const [error, setError] = useState(null);
 
   /**
-   * Load all scenes for the current workflow
+   * Load scenes (all or for specific workflow)
    */
   const loadScenes = useCallback(async () => {
     if (!isDesktop) {
@@ -25,7 +27,10 @@ export function useScenes(workflowId = 'default') {
     setError(null);
 
     try {
-      const data = await invoke('list_scenes', { workflowId });
+      // Use list_all_scenes if workflowId is 'all', otherwise list_scenes for specific workflow
+      const data = workflowId === 'all'
+        ? await invoke('list_all_scenes')
+        : await invoke('list_scenes', { workflowId });
 
       // Parse JSON data field for each scene
       const parsedScenes = data.map(scene => ({
@@ -54,9 +59,12 @@ export function useScenes(workflowId = 'default') {
     }
 
     try {
+      // Always use 'default' workflow when creating scenes, even if we're viewing 'all'
+      const targetWorkflowId = workflowId === 'all' ? 'default' : workflowId;
+
       const scene = await invoke('create_scene', {
         input: {
-          workflow_id: workflowId,
+          workflow_id: targetWorkflowId,
           name,
           data,
           thumbnail,
@@ -119,8 +127,6 @@ export function useScenes(workflowId = 'default') {
 
   /**
    * Update scene metadata (name, tags, etc.)
-   * Note: Backend doesn't have update_scene command yet, so we'll implement it
-   * by recreating with the same ID (or you'll need to add the command to Tauri)
    */
   const updateScene = useCallback(async (sceneId, updates) => {
     if (!isDesktop) {
@@ -128,25 +134,173 @@ export function useScenes(workflowId = 'default') {
     }
 
     try {
-      // For now, update local state only
-      // TODO: Add update_scene Tauri command in backend
-      setScenes(prev => prev.map(scene => {
-        if (scene.id === sceneId) {
-          return {
-            ...scene,
-            ...updates,
-            data: typeof updates.data === 'object'
-              ? { ...scene.data, ...updates.data }
-              : scene.data,
-          };
-        }
-        return scene;
-      }));
+      const scene = await invoke('update_scene', {
+        id: sceneId,
+        input: updates,
+      });
+
+      // Parse and update local state
+      const parsedScene = {
+        ...scene,
+        data: typeof scene.data === 'string' ? JSON.parse(scene.data) : scene.data,
+      };
+
+      setScenes(prev => prev.map(s => s.id === sceneId ? parsedScene : s));
+      return parsedScene;
     } catch (err) {
       console.error('Failed to update scene:', err);
       throw err;
     }
   }, [isDesktop]);
+
+  /**
+   * Create a variation of an existing scene
+   * Copies scene data but marks it as a variation and triggers generation
+   */
+  const createVariation = useCallback(async (parentScene, modifications = {}) => {
+    if (!isDesktop) {
+      throw new Error('Scenes are only available in desktop mode');
+    }
+
+    const { data, thumbnail } = parentScene;
+
+    // Create new scene data with parent reference
+    const variationData = {
+      ...data,
+      prompt: {
+        ...data.prompt,
+        ...modifications.prompt,
+      },
+      metadata: {
+        ...data.metadata,
+        variationOf: parentScene.id,
+        tags: [...(data.metadata?.tags || []), 'variation'].filter((v, i, a) => a.indexOf(v) === i),
+        ...modifications.metadata,
+      },
+    };
+
+    const variationName = modifications.name || `${parentScene.name} - Variation`;
+
+    // Create the variation scene without thumbnail initially
+    // The thumbnail will be updated when generation completes
+    const newScene = await createScene(variationName, variationData, null);
+
+    // Auto-trigger generation
+    try {
+      // Use the actual workflow_id from the parent scene or default
+      const targetWorkflowId = parentScene.workflow_id || 'default';
+
+      // Get the correct provider name from the model
+      const provider = getModelProvider(data.model) || 'openai';
+
+      // Prepare parameters
+      let parameters = { ...(data.params || {}) };
+
+      // If using parent as reference, convert thumbnail to base64
+      if (modifications.useAsReference && parentScene.thumbnail) {
+        try {
+          const base64Data = await invoke('image_to_base64', { path: parentScene.thumbnail });
+
+          // Add to reference_images array (new multi-image format)
+          parameters.reference_images = [{
+            data: base64Data,
+            strength: 0.75,
+            denoisingStrength: 0.7,
+          }];
+
+          console.log('[createVariation] Added parent image as reference');
+        } catch (err) {
+          console.error('[createVariation] Failed to load reference image:', err);
+          // Continue without reference image
+        }
+      }
+
+      const jobData = {
+        workflow_id: targetWorkflowId,
+        scene_id: newScene.id,
+        type: 'generation',
+        data: {
+          provider,
+          model: data.model,
+          prompt: variationData.prompt.main,
+          negative_prompt: variationData.prompt.negative,
+          parameters,
+        },
+      };
+
+      const job = await invoke('create_job', { input: jobData });
+
+      // Link job to variation scene
+      const updatedData = {
+        ...variationData,
+        jobs: [job.id],
+      };
+
+      await invoke('update_scene', {
+        id: newScene.id,
+        input: { data: updatedData },
+      });
+
+      console.log('[createVariation] Generation job created:', job.id);
+    } catch (err) {
+      console.error('[createVariation] Failed to trigger generation:', err);
+      // Continue - variation scene still exists even if generation fails
+    }
+
+    return newScene;
+  }, [isDesktop, workflowId, createScene]);
+
+  /**
+   * Create a new sequence or add scenes to existing sequence
+   */
+  const createSequence = useCallback(async (sceneIds, sequenceId = null) => {
+    if (!isDesktop) {
+      throw new Error('Scenes are only available in desktop mode');
+    }
+
+    // Validate all scenes are same category
+    const scenesToUpdate = scenes.filter(s => sceneIds.includes(s.id));
+    if (scenesToUpdate.length === 0) {
+      throw new Error('No valid scenes found');
+    }
+
+    const firstCategory = scenesToUpdate[0].data?.category;
+    const allSameCategory = scenesToUpdate.every(s => s.data?.category === firstCategory);
+
+    if (!allSameCategory) {
+      throw new Error('All scenes in a sequence must be the same category');
+    }
+
+    const sequenceUuid = sequenceId || crypto.randomUUID();
+
+    // Update each scene with sequence metadata
+    const updatePromises = sceneIds.map(async (sceneId, index) => {
+      const scene = scenes.find(s => s.id === sceneId);
+      if (!scene) return null;
+
+      const updatedData = {
+        ...scene.data,
+        metadata: {
+          ...scene.data.metadata,
+          sequenceId: sequenceUuid,
+          sequenceOrder: index,
+          tags: [...(scene.data.metadata?.tags || []), 'sequence'].filter((v, i, a) => a.indexOf(v) === i),
+        },
+      };
+
+      return await invoke('update_scene', {
+        id: sceneId,
+        input: { data: updatedData },
+      });
+    });
+
+    await Promise.all(updatePromises);
+
+    // Refresh scenes to reflect changes
+    await loadScenes();
+
+    return sequenceUuid;
+  }, [isDesktop, scenes, loadScenes]);
 
   /**
    * Search and filter scenes
@@ -212,5 +366,7 @@ export function useScenes(workflowId = 'default') {
     updateScene,
     getSceneJobs,
     filterScenes,
+    createVariation,
+    createSequence,
   };
 }

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::{GenerationRequest, GenerationService};
-use crate::db::{models::*, operations::JobOps};
+use crate::db::{models::*, operations::{JobOps, SceneOps}};
 
 /// Job processor that consumes jobs from the database queue
 pub struct JobProcessor {
@@ -143,11 +143,33 @@ impl JobProcessor {
             &job.id,
             UpdateJobInput {
                 status: Some("completed".to_string()),
-                result: Some(serde_json::to_value(result)?),
+                result: Some(serde_json::to_value(&result)?),
                 error: None,
             },
         )
         .await?;
+
+        // Update scene thumbnail if job is linked to a scene
+        if let Some(scene_id) = &job.scene_id {
+            if let Some(thumbnail_url) = result.output_url.or(result.output_data) {
+                eprintln!("[JobProcessor] Updating scene {} thumbnail with: {}", scene_id, thumbnail_url);
+
+                match SceneOps::update(
+                    pool,
+                    scene_id,
+                    UpdateSceneInput {
+                        name: None,
+                        data: None,
+                        thumbnail: Some(thumbnail_url.clone()),
+                    },
+                )
+                .await
+                {
+                    Ok(_) => eprintln!("[JobProcessor] Scene thumbnail updated successfully"),
+                    Err(e) => eprintln!("[JobProcessor] Warning: Failed to update scene thumbnail: {}", e),
+                }
+            }
+        }
 
         Ok(())
     }

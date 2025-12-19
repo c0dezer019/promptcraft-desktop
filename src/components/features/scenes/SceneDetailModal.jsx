@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, ExternalLink, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight, FolderOpen } from 'lucide-react';
+import { X, Copy, ExternalLink, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight, FolderOpen, GitBranch, Film } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '../../../lib/promptcraft-ui';
 import { SceneRelations } from './SceneRelations';
+import { CreateVariationDialog } from './CreateVariationDialog';
+import { CreateSequenceDialog } from './CreateSequenceDialog';
 import { convertToAssetUrl } from '../../../utils/fileUrlHelper';
 import { usePlatform } from '../../../lib/promptcraft-ui/hooks/usePlatform';
 import { getModelById } from '../../../constants/models';
@@ -12,12 +14,14 @@ import { getModelById } from '../../../constants/models';
  * SceneDetailModal - Expanded CivitAI-style view for scene details
  * Displays: full image, prompts, settings, metadata, variations, sequences
  */
-export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick }) {
+export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick, onCreateVariation, onCreateSequence }) {
   const { isDesktop } = usePlatform();
   const [jobs, setJobs] = useState([]);
   const [selectedJobIndex, setSelectedJobIndex] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [copiedField, setCopiedField] = useState(null);
+  const [showVariationDialog, setShowVariationDialog] = useState(false);
+  const [showSequenceDialog, setShowSequenceDialog] = useState(false);
 
   const { id, name, data, thumbnail, created_at } = scene;
   const { category, model, prompt, metadata, params } = data || {};
@@ -119,6 +123,22 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
     }
   };
 
+  // Handle variation creation
+  const handleCreateVariation = async (modifications) => {
+    if (onCreateVariation) {
+      await onCreateVariation(scene, modifications);
+      setShowVariationDialog(false);
+    }
+  };
+
+  // Handle sequence creation
+  const handleCreateSequence = async (sceneIds) => {
+    if (onCreateSequence) {
+      await onCreateSequence(sceneIds);
+      setShowSequenceDialog(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -141,6 +161,24 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
             >
               <Edit2 className="w-4 h-4 mr-2" />
               Load Scene
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowVariationDialog(true)}
+              className="text-purple-600 hover:text-purple-700 dark:text-purple-400"
+            >
+              <GitBranch className="w-4 h-4 mr-2" />
+              Create Variation
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSequenceDialog(true)}
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Add to Sequence
             </Button>
             <Button
               variant="ghost"
@@ -413,6 +451,25 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
           </div>
         </div>
       </div>
+
+      {/* Variation Dialog */}
+      {showVariationDialog && (
+        <CreateVariationDialog
+          parentScene={scene}
+          onClose={() => setShowVariationDialog(false)}
+          onCreateVariation={handleCreateVariation}
+        />
+      )}
+
+      {/* Sequence Dialog */}
+      {showSequenceDialog && (
+        <CreateSequenceDialog
+          scenes={allScenes}
+          currentScene={scene}
+          onClose={() => setShowSequenceDialog(false)}
+          onCreateSequence={handleCreateSequence}
+        />
+      )}
     </div>
   );
 }

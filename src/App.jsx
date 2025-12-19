@@ -252,7 +252,7 @@ export default function PromptCraft() {
 
   const handleLoadScene = (scene) => {
     // Load a scene from Scene Manager into the current builder
-    const { data } = scene;
+    const { data, thumbnail } = scene;
     if (!data) return;
 
     const { category, model, prompt } = data;
@@ -264,7 +264,22 @@ export default function PromptCraft() {
       if (prompt.modifiers) updatePrompt(targetPromptKey, 'modifiers', prompt.modifiers);
       if (prompt.negative) updatePrompt(targetPromptKey, 'negative', prompt.negative);
       if (prompt.nodes) updatePrompt(targetPromptKey, 'nodes', prompt.nodes);
-      if (prompt.params) updatePrompt(targetPromptKey, 'params', prompt.params);
+
+      // Load params, but if there's a thumbnail and no existing referenceImage,
+      // set the thumbnail as the reference image
+      let paramsToLoad = prompt.params || {};
+      if (thumbnail && !paramsToLoad.referenceImage) {
+        // Create reference image object from thumbnail
+        paramsToLoad = {
+          ...paramsToLoad,
+          referenceImage: {
+            data: thumbnail,
+            fileName: `${scene.name}.png`,
+            fileSize: 0, // Size not available from thumbnail
+          }
+        };
+      }
+      updatePrompt(targetPromptKey, 'params', paramsToLoad);
     }
 
     // Set model if different

@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { usePlatform } from '../../lib/promptcraft-ui';
 import { SceneCard } from './scenes/SceneCard';
 import { SceneDetailModal } from './scenes/SceneDetailModal';
+import { getModelById } from '../../constants/models';
 
 /**
  * SceneManager - Main component for managing generation scenes
@@ -311,20 +312,24 @@ export function SceneManager({ onLoadScene, onClose }) {
                   >
                     All Models
                   </button>
-                  {availableModels.map(model => (
-                    <button
-                      key={model}
-                      onClick={() => setFilters(prev => ({ ...prev, model }))}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                        filters.model === model
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {model}
-                    </button>
-                  ))}
+                  {availableModels.map(model => {
+                    const modelInfo = getModelById(model);
+                    const displayName = modelInfo?.name || model;
+                    return (
+                      <button
+                        key={model}
+                        onClick={() => setFilters(prev => ({ ...prev, model }))}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                          filters.model === model
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {displayName}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, Image, Video, Sparkles } from 'lucide-react';
+import { getModelById } from '../../../constants/models';
 
 /**
  * SceneCard - Tiled card component for displaying scene thumbnails in grid
@@ -35,6 +36,10 @@ export function SceneCard({ scene, onClick }) {
   const imageSize = getImageSize();
   const jobCount = Array.isArray(jobs) ? jobs.length : 0;
 
+  // Get model display name
+  const modelInfo = model ? getModelById(model) : null;
+  const modelDisplayName = modelInfo?.name || model || 'Unknown';
+
   return (
     <div
       onClick={() => onClick(scene)}
@@ -68,8 +73,8 @@ export function SceneCard({ scene, onClick }) {
           {/* Model Name */}
           <div className="flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[120px]">
-              {model || 'Unknown'}
+            <span>
+              {modelDisplayName}
             </span>
           </div>
 

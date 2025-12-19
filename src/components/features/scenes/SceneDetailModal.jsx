@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Download, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Copy, ExternalLink, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '../../../lib/promptcraft-ui';
 import { SceneRelations } from './SceneRelations';
 import { convertToAssetUrl } from '../../../utils/fileUrlHelper';
 import { usePlatform } from '../../../lib/promptcraft-ui/hooks/usePlatform';
+import { getModelById } from '../../../constants/models';
 
 /**
  * SceneDetailModal - Expanded CivitAI-style view for scene details
@@ -19,6 +21,10 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
 
   const { id, name, data, thumbnail, created_at } = scene;
   const { category, model, prompt, metadata, params } = data || {};
+
+  // Get model display name
+  const modelInfo = model ? getModelById(model) : null;
+  const modelDisplayName = modelInfo?.name || model || 'Unknown';
 
   // Load jobs for this scene
   useEffect(() => {
@@ -86,6 +92,19 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
   };
 
   const CategoryIcon = category === 'video' ? Video : ImageIcon;
+
+  // Handle opening in default viewer
+  const handleOpenInViewer = async () => {
+    // Prefer file_path from job result, fallback to raw output URL
+    const pathToOpen = jobResult?.file_path || rawOutputUrl;
+    if (pathToOpen) {
+      try {
+        await invoke('open_in_default_app', { path: pathToOpen });
+      } catch (error) {
+        console.error('Failed to open in viewer:', error);
+      }
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
@@ -179,17 +198,17 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
                 )}
               </div>
 
-              {/* Download/Copy Actions */}
+              {/* Open in Viewer/Copy Actions */}
               {outputUrl && (
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(outputUrl, '_blank')}
+                    onClick={handleOpenInViewer}
                     className="flex-1"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open in Viewer
                   </Button>
                   <Button
                     variant="outline"
@@ -212,11 +231,11 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
                   <Hash className="w-5 h-5" />
                   Details
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Sparkles className="w-4 h-4" />
                     <span className="font-medium">Model:</span>
-                    <span className="text-gray-900 dark:text-white truncate">{model || 'Unknown'}</span>
+                    <span className="text-gray-900 dark:text-white">{modelDisplayName}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <CategoryIcon className="w-4 h-4" />

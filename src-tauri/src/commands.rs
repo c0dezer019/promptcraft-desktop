@@ -410,6 +410,4 @@ pub async fn open_with_app(path: String) -> Result<(), String> {
         // Don't automatically open anything - let the user use "Open in Viewer" instead
         return Err("No image editor selected or available".to_string());
     }
-
-    Ok(())
 }

@@ -82,40 +82,21 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
-  const [showImage, setShowImage] = React.useState(false);
 
   // Memoize parsed job data to avoid re-parsing on every render
   const jobData = React.useMemo(() => {
-    console.time('[JobDetailModal] Parse job data');
     if (!job?.data) return null;
-    const result = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
-    console.timeEnd('[JobDetailModal] Parse job data');
-    return result;
+    return typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
   }, [job?.data]);
 
-  // Lazy parse job result only when needed (it contains the huge base64 image)
+  // Parse job result (just like the builders do - simple and direct)
   const jobResult = React.useMemo(() => {
-    console.time('[JobDetailModal] Parse job result');
-    if (!job?.result) {
-      console.timeEnd('[JobDetailModal] Parse job result');
-      return null;
-    }
+    if (!job?.result) return null;
+    return typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
+  }, [job?.result]);
 
-    // Only parse if we're showing the image, otherwise defer
-    if (!showImage || !isOpen) {
-      console.timeEnd('[JobDetailModal] Parse job result');
-      return null;
-    }
-
-    const result = typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
-    console.timeEnd('[JobDetailModal] Parse job result');
-    return result;
-  }, [job?.result, showImage, isOpen]);
-
-  // Memoize image source to avoid recalculating on every render
+  // Calculate image source (matching the builder pattern exactly)
   const imageSource = React.useMemo(() => {
-    console.time('[JobDetailModal] Calculate image source');
-
     // Validate the output URL to prevent XSS
     const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
       ? jobResult.output_url
@@ -125,12 +106,9 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
     const base64Data = jobResult?.output_data;
     const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
 
-    // Convert file:// URLs to Tauri asset protocol URLs
-    const result = isDesktop && rawImageSource ? convertToAssetUrl(rawImageSource) : rawImageSource;
-
-    console.timeEnd('[JobDetailModal] Calculate image source');
-    return result;
-  }, [jobResult?.output_url, jobResult?.output_data, isDesktop]);
+    // Convert file:// URLs to asset:// protocol for Tauri
+    return rawImageSource ? convertToAssetUrl(rawImageSource) : null;
+  }, [jobResult?.output_url, jobResult?.output_data]);
 
   // Memoize stringified JSON to avoid re-stringifying on every render
   const parametersJson = React.useMemo(() => {
@@ -141,31 +119,10 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
     return jobResult?.metadata ? JSON.stringify(jobResult.metadata, null, 2) : null;
   }, [jobResult?.metadata]);
 
-  // Reset image loaded state when job changes OR when modal closes
+  // Reset image loaded state when job changes
   React.useEffect(() => {
     setImageLoaded(false);
-    setShowImage(false);
-  }, [job?.id, isOpen]);
-
-  // Defer image rendering with a longer delay to allow modal to render first
-  React.useEffect(() => {
-    if (isOpen && job) {
-      // Use setTimeout instead of rAF for a longer delay
-      const timeout = setTimeout(() => {
-        setShowImage(true);
-      }, 100); // 100ms delay to let modal paint first
-      return () => clearTimeout(timeout);
-    }
-  }, [isOpen, job?.id]);
-
-  // Log render timing
-  React.useEffect(() => {
-    if (isOpen && job) {
-      console.log('[JobDetailModal] Modal rendered for job:', job.id);
-      console.log('[JobDetailModal] Image source length:', imageSource?.length);
-      console.log('[JobDetailModal] Parameters JSON length:', parametersJson?.length);
-    }
-  }, [isOpen, job?.id, imageSource, parametersJson]);
+  }, [job?.id]);
 
   if (!isOpen || !job) return null;
 
@@ -284,27 +241,25 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
           {imageSource && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Result</label>
-              <div className="relative group min-h-[200px]">
-                {(!showImage || !imageLoaded) && (
+              <div className="relative group">
+                {!imageLoaded && (
                   <div className="w-full h-64 flex items-center justify-center bg-gray-800 rounded-lg border border-gray-700">
                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                   </div>
                 )}
-                {showImage && (
-                  <img
-                    src={imageSource}
-                    alt="Generation result"
-                    className={`w-full rounded-lg border border-gray-700 ${imageLoaded ? 'block' : 'hidden'}`}
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
-                    onLoad={() => setImageLoaded(true)}
-                    onError={(e) => {
-                      console.error('Failed to load image:', imageSource?.substring(0, 100));
-                      setImageLoaded(true);
-                    }}
-                  />
-                )}
-                {imageLoaded && showImage && (
+                <img
+                  src={imageSource}
+                  alt="Generation result"
+                  className={`w-full rounded-lg border border-gray-700 ${imageLoaded ? 'block' : 'hidden'}`}
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => {
+                    console.error('Failed to load image:', imageSource?.substring(0, 100));
+                    setImageLoaded(true);
+                  }}
+                />
+                {imageLoaded && (
                   <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={handleDownload}

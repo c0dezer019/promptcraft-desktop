@@ -63,8 +63,8 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreloa
   const base64Data = jobResult?.output_data;
   const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
 
-  // Convert file:// URLs to Tauri asset protocol URLs
-  const imageSource = isDesktop && rawImageSource ? convertToAssetUrl(rawImageSource) : rawImageSource;
+  // Convert file:// URLs to asset:// protocol for Tauri
+  const imageSource = rawImageSource ? convertToAssetUrl(rawImageSource) : null;
 
   const handleDownload = async (e) => {
     e.stopPropagation();
@@ -213,8 +213,8 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
     const base64Data = jobResult?.output_data;
     const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
 
-    // Convert file:// URLs to Tauri asset protocol URLs
-    const imageSource = isDesktop && rawImageSource ? convertToAssetUrl(rawImageSource) : rawImageSource;
+    // Convert file:// URLs to asset:// protocol for Tauri
+    const imageSource = rawImageSource ? convertToAssetUrl(rawImageSource) : null;
 
     // Preload image if we haven't already
     if (imageSource && !preloadedImages.current.has(job.id)) {
@@ -222,7 +222,7 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
       img.src = imageSource;
       preloadedImages.current.add(job.id);
     }
-  }, [isDesktop]);
+  }, []);
 
   // Load all jobs (across all workflows if workflowId is null)
   const loadJobs = async () => {
@@ -389,7 +389,8 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
+                  style={{ colorScheme: 'dark' }}
+                  className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="all">All Status</option>
                   <option value="completed">Completed</option>
@@ -402,11 +403,12 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
               <select
                 value={providerFilter}
                 onChange={(e) => setProviderFilter(e.target.value)}
-                className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
+                style={{ colorScheme: 'dark' }}
+                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="all">All Providers</option>
                 {providers.map(provider => (
-                  <option key={provider} value={provider} className="capitalize">
+                  <option key={provider} value={provider}>
                     {provider}
                   </option>
                 ))}

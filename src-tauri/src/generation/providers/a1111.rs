@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::super::{GenerationProvider, GenerationRequest, GenerationResult};
+use crate::generation::utils::{extract_reference_image, get_reference_image_params};
 
 /// Automatic1111 provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,19 +70,49 @@ impl A1111Provider {
 
         let model = params.get("model").and_then(|v| v.as_str());
 
+        // Check for reference image
+        let has_reference_image = extract_reference_image(params).is_some();
+
         // Build request body
         let mut request_body = serde_json::json!({
             "prompt": prompt,
             "negative_prompt": negative_prompt,
             "steps": steps,
             "cfg_scale": cfg_scale,
-            "width": width,
-            "height": height,
             "sampler_name": sampler_name,
             "seed": seed,
             "n_iter": 1,
             "batch_size": 1,
         });
+
+        // Determine endpoint and add appropriate parameters
+        let endpoint = if has_reference_image {
+            // Extract reference image data
+            if let Some((_mime, base64_data)) = extract_reference_image(params) {
+                let (_, denoising_strength, resize_mode, _, _) = get_reference_image_params(params);
+
+                // img2img-specific parameters
+                request_body["init_images"] = serde_json::json!([base64_data]);
+                request_body["denoising_strength"] = serde_json::json!(denoising_strength);
+
+                // Resize mode: 0=stretch, 1=crop, 2=fill
+                let resize_mode_int = match resize_mode.as_str() {
+                    "stretch" => 0,
+                    "crop" => 1,
+                    "fill" => 2,
+                    _ => 1, // default to crop
+                };
+                request_body["resize_mode"] = serde_json::json!(resize_mode_int);
+
+                eprintln!("Using A1111 img2img with denoising_strength={}", denoising_strength);
+            }
+            "/sdapi/v1/img2img"
+        } else {
+            // txt2img-specific parameters
+            request_body["width"] = serde_json::json!(width);
+            request_body["height"] = serde_json::json!(height);
+            "/sdapi/v1/txt2img"
+        };
 
         // If model specified, set override_settings
         if let Some(model_name) = model {
@@ -91,7 +122,7 @@ impl A1111Provider {
         }
 
         // Send request to A1111 API
-        let url = format!("{}/sdapi/v1/txt2img", config.api_url);
+        let url = format!("{}{}", config.api_url, endpoint);
         let response = self
             .client
             .post(&url)
@@ -133,8 +164,10 @@ impl A1111Provider {
         Ok(GenerationResult {
             output_url: None,
             output_data: Some(first_image.to_string()),
+            file_path: None,
             metadata: serde_json::json!({
                 "provider": "a1111",
+                "mode": if has_reference_image { "img2img" } else { "txt2img" },
                 "info": info,
                 "parameters": {
                     "prompt": prompt,
@@ -145,6 +178,7 @@ impl A1111Provider {
                     "height": height,
                     "sampler": sampler_name,
                     "seed": seed,
+                    "has_reference_image": has_reference_image,
                 }
             }),
         })

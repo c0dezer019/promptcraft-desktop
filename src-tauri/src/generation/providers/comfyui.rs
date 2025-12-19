@@ -5,6 +5,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use super::super::{GenerationProvider, GenerationRequest, GenerationResult};
+use crate::generation::utils::{extract_reference_image, get_reference_image_params};
 
 /// ComfyUI provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,18 +75,56 @@ impl ComfyUIProvider {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Model checkpoint required for ComfyUI"))?;
 
-        // Build basic txt2img workflow
-        let workflow = self.build_txt2img_workflow(
-            prompt,
-            negative_prompt,
-            model,
-            steps,
-            cfg_scale,
-            width,
-            height,
-            sampler,
-            seed,
-        );
+        // Check for reference image and build appropriate workflow
+        let workflow = if let Some((_, base64_data)) = extract_reference_image(params) {
+            let (_, denoising_strength, _, controlnet_type, controlnet_strength) =
+                get_reference_image_params(params);
+
+            if let Some(cn_type) = controlnet_type {
+                // Build ControlNet workflow
+                eprintln!("Building ComfyUI ControlNet workflow (type: {})", cn_type);
+                self.build_controlnet_workflow(
+                    prompt,
+                    negative_prompt,
+                    model,
+                    &base64_data,
+                    &cn_type,
+                    controlnet_strength,
+                    steps,
+                    cfg_scale,
+                    sampler,
+                    seed,
+                    denoising_strength,
+                )
+            } else {
+                // Build img2img workflow
+                eprintln!("Building ComfyUI img2img workflow");
+                self.build_img2img_workflow(
+                    prompt,
+                    negative_prompt,
+                    model,
+                    &base64_data,
+                    steps,
+                    cfg_scale,
+                    sampler,
+                    seed,
+                    denoising_strength,
+                )
+            }
+        } else {
+            // Build basic txt2img workflow
+            self.build_txt2img_workflow(
+                prompt,
+                negative_prompt,
+                model,
+                steps,
+                cfg_scale,
+                width,
+                height,
+                sampler,
+                seed,
+            )
+        };
 
         // Submit workflow to ComfyUI
         let prompt_url = format!("{}/prompt", config.api_url);
@@ -125,6 +164,7 @@ impl ComfyUIProvider {
         Ok(GenerationResult {
             output_url: Some(first_image.clone()),
             output_data: None,
+            file_path: None,
             metadata: serde_json::json!({
                 "provider": "comfyui",
                 "prompt_id": prompt_id,
@@ -217,6 +257,200 @@ impl ComfyUIProvider {
         })
     }
 
+    /// Build an img2img workflow for ComfyUI
+    /// LoadImage → VAEEncode → KSampler (with denoise) → VAEDecode → SaveImage
+    fn build_img2img_workflow(
+        &self,
+        prompt: &str,
+        negative_prompt: &str,
+        model: &str,
+        base64_image: &str,
+        steps: u32,
+        cfg: f32,
+        sampler: &str,
+        seed: i64,
+        denoise: f32,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "1": {
+                "class_type": "CheckpointLoaderSimple",
+                "inputs": {
+                    "ckpt_name": model
+                }
+            },
+            "2": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": prompt,
+                    "clip": ["1", 1]
+                }
+            },
+            "3": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": negative_prompt,
+                    "clip": ["1", 1]
+                }
+            },
+            "4": {
+                "class_type": "LoadImage",
+                "inputs": {
+                    "image": base64_image
+                }
+            },
+            "5": {
+                "class_type": "VAEEncode",
+                "inputs": {
+                    "pixels": ["4", 0],
+                    "vae": ["1", 2]
+                }
+            },
+            "6": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "seed": seed,
+                    "steps": steps,
+                    "cfg": cfg,
+                    "sampler_name": sampler,
+                    "scheduler": "normal",
+                    "denoise": denoise,
+                    "model": ["1", 0],
+                    "positive": ["2", 0],
+                    "negative": ["3", 0],
+                    "latent_image": ["5", 0]
+                }
+            },
+            "7": {
+                "class_type": "VAEDecode",
+                "inputs": {
+                    "samples": ["6", 0],
+                    "vae": ["1", 2]
+                }
+            },
+            "8": {
+                "class_type": "SaveImage",
+                "inputs": {
+                    "filename_prefix": "ComfyUI_img2img",
+                    "images": ["7", 0]
+                }
+            }
+        })
+    }
+
+    /// Build a ControlNet workflow for ComfyUI
+    /// LoadImage → ControlNetPreprocessor → ControlNetApply → KSampler → VAEDecode → SaveImage
+    fn build_controlnet_workflow(
+        &self,
+        prompt: &str,
+        negative_prompt: &str,
+        model: &str,
+        base64_image: &str,
+        controlnet_type: &str,
+        controlnet_strength: f32,
+        steps: u32,
+        cfg: f32,
+        sampler: &str,
+        seed: i64,
+        denoise: f32,
+    ) -> serde_json::Value {
+        // Map controlnet types to preprocessor class types
+        let preprocessor_class = match controlnet_type {
+            "canny" => "CannyEdgePreprocessor",
+            "depth" => "MidasDepthMapPreprocessor",
+            "openpose" => "OpenposePreprocessor",
+            "scribble" => "ScribblePreprocessor",
+            "lineart" => "LineArtPreprocessor",
+            _ => "CannyEdgePreprocessor", // default to canny
+        };
+
+        serde_json::json!({
+            "1": {
+                "class_type": "CheckpointLoaderSimple",
+                "inputs": {
+                    "ckpt_name": model
+                }
+            },
+            "2": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": prompt,
+                    "clip": ["1", 1]
+                }
+            },
+            "3": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": negative_prompt,
+                    "clip": ["1", 1]
+                }
+            },
+            "4": {
+                "class_type": "LoadImage",
+                "inputs": {
+                    "image": base64_image
+                }
+            },
+            "5": {
+                "class_type": preprocessor_class,
+                "inputs": {
+                    "image": ["4", 0]
+                }
+            },
+            "6": {
+                "class_type": "ControlNetLoader",
+                "inputs": {
+                    "control_net_name": format!("control_v11p_sd15_{}.pth", controlnet_type)
+                }
+            },
+            "7": {
+                "class_type": "ControlNetApply",
+                "inputs": {
+                    "strength": controlnet_strength,
+                    "conditioning": ["2", 0],
+                    "control_net": ["6", 0],
+                    "image": ["5", 0]
+                }
+            },
+            "8": {
+                "class_type": "EmptyLatentImage",
+                "inputs": {
+                    "width": 512,
+                    "height": 512,
+                    "batch_size": 1
+                }
+            },
+            "9": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "seed": seed,
+                    "steps": steps,
+                    "cfg": cfg,
+                    "sampler_name": sampler,
+                    "scheduler": "normal",
+                    "denoise": denoise,
+                    "model": ["1", 0],
+                    "positive": ["7", 0],
+                    "negative": ["3", 0],
+                    "latent_image": ["8", 0]
+                }
+            },
+            "10": {
+                "class_type": "VAEDecode",
+                "inputs": {
+                    "samples": ["9", 0],
+                    "vae": ["1", 2]
+                }
+            },
+            "11": {
+                "class_type": "SaveImage",
+                "inputs": {
+                    "filename_prefix": format!("ComfyUI_controlnet_{}", controlnet_type),
+                    "images": ["10", 0]
+                }
+            }
+        })
+    }
+
     /// Poll ComfyUI for workflow completion
     async fn poll_for_completion(
         &self,
@@ -247,8 +481,13 @@ impl ComfyUIProvider {
             if let Some(prompt_history) = history.get(prompt_id) {
                 // Check if outputs exist
                 if let Some(outputs) = prompt_history.get("outputs") {
-                    // Find SaveImage node output
-                    if let Some(save_image) = outputs.get("7") {
+                    // Try to find SaveImage node output in different node IDs
+                    // Node 7: txt2img, Node 8: img2img, Node 11: controlnet
+                    let save_image = outputs.get("7")
+                        .or_else(|| outputs.get("8"))
+                        .or_else(|| outputs.get("11"));
+
+                    if let Some(save_image) = save_image {
                         if let Some(images) = save_image.get("images").and_then(|v| v.as_array()) {
                             let image_urls: Vec<String> = images
                                 .iter()

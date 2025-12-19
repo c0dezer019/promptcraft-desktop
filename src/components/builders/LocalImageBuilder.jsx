@@ -6,6 +6,7 @@ import { SD_CATEGORIES } from '../../lib/promptcraft-ui/constants/tagCategories.
 import { SectionHeader } from '../../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
 import { TagGroup } from '../../lib/promptcraft-ui/components/molecules/TagGroup.jsx';
 import { EnhanceButton } from '../../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
+import { ReferenceImageUpload } from '../../lib/promptcraft-ui/components/molecules/ReferenceImageUpload.jsx';
 import { callAI } from '../../utils/aiApi.js';
 import { EnhancementErrorModal } from '../EnhancementErrorModal.jsx';
 
@@ -21,6 +22,8 @@ export const LocalImageBuilder = ({
   setNegativePrompt,
   modifiers = [],
   setModifiers,
+  params = {},
+  setParams,
   onOpenSettings
 }) => {
   const activeTool = getActiveTool();
@@ -128,6 +131,11 @@ export const LocalImageBuilder = ({
         seed
       };
 
+      // Add reference image if present
+      if (params.referenceImage) {
+        parameters.reference_image = params.referenceImage;
+      }
+
       // Submit generation job
       const job = await invoke('submit_generation', {
         workflowId: null,
@@ -213,6 +221,19 @@ export const LocalImageBuilder = ({
               className="w-full h-24 p-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-gray-900 dark:text-gray-100"
             />
           </div>
+
+          {/* Reference Image */}
+          <ReferenceImageUpload
+            referenceImage={params.referenceImage}
+            onImageSelect={(imageData) => setParams({ ...params, referenceImage: imageData })}
+            onImageRemove={() => setParams({ ...params, referenceImage: null })}
+            showAdvancedControls={true}
+            provider={activeTool?.id}
+            onParamsChange={(updates) => setParams({
+              ...params,
+              referenceImage: { ...params.referenceImage, ...updates }
+            })}
+          />
 
           {/* Parameters Grid */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">

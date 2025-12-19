@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Image, Sparkles, MinusCircle, Loader2, CheckCircle2, XCircle, Zap, Download } from 'lucide-react';
+import { Image, Sparkles, MinusCircle, Loader2, CheckCircle2, XCircle, Zap, ExternalLink } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { TextArea, Select } from '../../lib/promptcraft-ui/components/atoms/Input.jsx';
 import { SectionHeader } from '../../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
 import { TagGroup } from '../../lib/promptcraft-ui/components/molecules/TagGroup.jsx';
 import { EnhanceButton } from '../../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
+import { ReferenceImageUpload } from '../../lib/promptcraft-ui/components/molecules/ReferenceImageUpload.jsx';
 import { SD_CATEGORIES } from '../../lib/promptcraft-ui/constants/tagCategories.js';
 import { callAI } from '../../utils/aiApi.js';
 import { useGeneration } from '../../lib/promptcraft-ui/hooks/useGeneration.js';
@@ -131,6 +133,7 @@ const StandardImageBuilder = ({
   const provider = getModelProvider(model);
   const modelName = modelConfig?.name || model;
   const isOpenAIImage = provider === 'openai';
+  const isGoogleImage = provider === 'google';
   const isComfy = model === 'comfy';
   const isA1111 = model === 'a1111';
   const isSDModel = isComfy || isA1111;
@@ -141,7 +144,7 @@ const StandardImageBuilder = ({
   const [enhancementError, setEnhancementError] = useState('');
 
   // Generation hooks
-  const { generate, generating, error, latestJob, completedJobs, jobs, loadJobs } = useGeneration(workflowId);
+  const { generate, generating, error, latestJob, jobs, loadJobs } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
 
@@ -152,6 +155,11 @@ const StandardImageBuilder = ({
   const [size, setSize] = useState('1024x1024');
   const [quality, setQuality] = useState('standard');
   const [style, setStyle] = useState('vivid');
+
+  // Google Gemini specific parameters
+  const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [imageSize, setImageSize] = useState('1K');
+  const [numImages, setNumImages] = useState(1);
 
   // A1111 specific parameters
   const [steps, setSteps] = useState(params.steps || 20);
@@ -168,6 +176,8 @@ const StandardImageBuilder = ({
     let systemPrompt;
     if (isOpenAIImage) {
       systemPrompt = "You are an expert prompt engineer for OpenAI's GPT Image models. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details (dialogue, scene descriptions, character actions, etc.). If it's written as a script, keep it as a script. If it's a paragraph, keep it as a paragraph. Only add details about: composition, lighting, style, colors, or mood where not already specified. Do not remove or restructure existing content. Keep it under 150 words. Return ONLY the enhanced prompt.";
+    } else if (isGoogleImage) {
+      systemPrompt = "You are an expert prompt engineer for Google's Gemini image generation models. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE the original structure, format, and any existing specific details. Focus on adding: visual clarity, composition details, lighting, style, and artistic elements where not specified. Keep descriptions natural and detailed. Do not remove or restructure existing content. Return ONLY the enhanced prompt.";
     } else if (isSDModel) {
       systemPrompt = "You are an expert prompt engineer for Stable Diffusion. Enhance the user's prompt by adding missing visual details ONLY where they are lacking. PRESERVE existing tags and descriptors. Only add: quality tags, artistic style, composition, lighting, or technical details where not specified. Do not remove or restructure existing content. Keep it concise. Return ONLY the enhanced prompt.";
     } else {
@@ -243,6 +253,12 @@ const StandardImageBuilder = ({
         style,
         n: 1
       };
+    } else if (isGoogleImage) {
+      parameters = {
+        aspect_ratio: aspectRatio,
+        image_size: imageSize,
+        n: numImages
+      };
     } else if (isA1111) {
       parameters = {
         prompt: fullPrompt,
@@ -260,6 +276,11 @@ const StandardImageBuilder = ({
       };
     }
 
+    // Add reference image if present
+    if (params.referenceImage) {
+      parameters.reference_image = params.referenceImage;
+    }
+
     await generate(provider, fullPrompt, model, parameters);
   };
 
@@ -273,6 +294,18 @@ const StandardImageBuilder = ({
 
   const getStyleOptions = () => {
     return modelConfig?.parameters?.style || ['vivid', 'natural'];
+  };
+
+  const getAspectRatioOptions = () => {
+    return modelConfig?.parameters?.aspect_ratio || ['1:1', '16:9', '9:16', '4:3', '3:4'];
+  };
+
+  const getImageSizeOptions = () => {
+    return modelConfig?.parameters?.image_size || ['1K', '2K', '4K'];
+  };
+
+  const getNumImagesOptions = () => {
+    return modelConfig?.parameters?.n || [1, 2, 4];
   };
 
   return (
@@ -335,6 +368,21 @@ const StandardImageBuilder = ({
             </div>
           )}
 
+          {/* Reference Image - Show for supported providers */}
+          {(isSDModel || isGoogleImage) && (
+            <ReferenceImageUpload
+              referenceImage={params.referenceImage}
+              onImageSelect={(imageData) => setParams({ ...params, referenceImage: imageData })}
+              onImageRemove={() => setParams({ ...params, referenceImage: null })}
+              showAdvancedControls={true}
+              provider={provider}
+              onParamsChange={(updates) => setParams({
+                ...params,
+                referenceImage: { ...params.referenceImage, ...updates }
+              })}
+            />
+          )}
+
           {/* Parameters Section */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <SectionHeader icon={Sparkles} title="Parameters" />
@@ -366,6 +414,38 @@ const StandardImageBuilder = ({
                       value={style}
                       onChange={(e) => setStyle(e.target.value)}
                       options={getStyleOptions()}
+                    />
+                  </div>
+                </>
+              )}
+
+              {isGoogleImage && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Aspect Ratio</label>
+                    <Select
+                      className="mt-1"
+                      value={aspectRatio}
+                      onChange={(e) => setAspectRatio(e.target.value)}
+                      options={getAspectRatioOptions()}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Image Size</label>
+                    <Select
+                      className="mt-1"
+                      value={imageSize}
+                      onChange={(e) => setImageSize(e.target.value)}
+                      options={getImageSizeOptions()}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Number of Images</label>
+                    <Select
+                      className="mt-1"
+                      value={numImages}
+                      onChange={(e) => setNumImages(parseInt(e.target.value))}
+                      options={getNumImagesOptions().map(n => n.toString())}
                     />
                   </div>
                 </>
@@ -485,7 +565,7 @@ const StandardImageBuilder = ({
       </div>
 
       {/* Generation Status & Results */}
-      {!isComfy && (error || localError || latestJob || completedJobs.length > 0) && (
+      {!isComfy && (error || localError || latestJob) && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <SectionHeader icon={Zap} title="Generation Status" />
 
@@ -518,18 +598,6 @@ const StandardImageBuilder = ({
                     Error: {latestJob.error}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Completed Jobs List */}
-            {completedJobs.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-300">Recent Generations ({completedJobs.length})</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {completedJobs.slice(0, 6).map((job) => (
-                    <CompletedJobCard key={job.id} job={job} />
-                  ))}
-                </div>
               </div>
             )}
           </div>
@@ -568,13 +636,47 @@ const StatusBadge = ({ status }) => {
 
 // Result Display Component
 const ResultDisplay = ({ result }) => {
+  const [primaryIndex, setPrimaryIndex] = React.useState(0);
   const resultData = typeof result === 'string' ? JSON.parse(result) : result;
 
-  // Handle both URL-based output (DALL-E, Grok, etc.) and base64 output (Gemini)
-  const imageSource = resultData.output_url ||
-    (resultData.output_data ? `data:image/png;base64,${resultData.output_data}` : null);
+  // Check if result contains multiple images (array)
+  const images = resultData.images || (resultData.output_url ? [resultData] : []);
 
-  if (imageSource) {
+  if (images.length === 0) {
+    return (
+      <div className="text-sm text-gray-400">
+        Result available (no preview)
+      </div>
+    );
+  }
+
+  // Single image display
+  if (images.length === 1) {
+    const imageData = images[0];
+    const imageSource = imageData.output_url ||
+      (imageData.output_data ? `data:image/png;base64,${imageData.output_data}` : null) ||
+      (resultData.output_url || (resultData.output_data ? `data:image/png;base64,${resultData.output_data}` : null));
+
+    if (!imageSource) {
+      return (
+        <div className="text-sm text-gray-400">
+          Result available (no preview)
+        </div>
+      );
+    }
+
+    const handleOpenInViewer = async () => {
+      // Prefer file_path (actual file path) over output_url (which might be asset:// or http://)
+      const pathToOpen = imageData.file_path || resultData.file_path || imageData.output_url || resultData.output_url;
+      if (pathToOpen) {
+        try {
+          await invoke('open_in_default_app', { path: pathToOpen });
+        } catch (error) {
+          console.error('Failed to open image in viewer:', error);
+        }
+      }
+    };
+
     return (
       <div className="relative group">
         <img
@@ -583,62 +685,120 @@ const ResultDisplay = ({ result }) => {
           className="w-full rounded-lg border border-white/10"
         />
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {resultData.output_url && (
-            <a
-              href={resultData.output_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors"
-            >
-              Open Full Size
-            </a>
-          )}
-          {resultData.output_url && (
-            <a
-              href={resultData.output_url}
-              download
+          {(imageData.file_path || resultData.file_path || imageData.output_url || resultData.output_url) && (
+            <button
+              onClick={handleOpenInViewer}
               className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
             >
-              <Download className="w-3 h-3" />
-              Download
-            </a>
+              <ExternalLink className="w-3 h-3" />
+              Open in Viewer
+            </button>
           )}
         </div>
       </div>
     );
   }
 
+  // Multiple images display - reorder based on primaryIndex
+  const reorderedImages = [
+    images[primaryIndex],
+    ...images.slice(0, primaryIndex),
+    ...images.slice(primaryIndex + 1)
+  ];
+
+  const handleThumbnailClick = (thumbnailIndex) => {
+    // Calculate original index from reordered position
+    let originalIndex;
+    if (thumbnailIndex === 0) {
+      originalIndex = primaryIndex;
+    } else if (thumbnailIndex <= primaryIndex) {
+      originalIndex = thumbnailIndex - 1;
+    } else {
+      originalIndex = thumbnailIndex;
+    }
+    setPrimaryIndex(originalIndex);
+  };
+
   return (
-    <div className="text-sm text-gray-400">
-      Result available (no preview)
-    </div>
-  );
-};
+    <div className="space-y-3">
+      {/* Primary image (first one in reordered array) */}
+      <ImageCard
+        imageData={reorderedImages[0]}
+        isPrimary={true}
+        index={primaryIndex}
+        onClick={() => {}}
+      />
 
-// Completed Job Card Component
-const CompletedJobCard = ({ job }) => {
-  const result = job.result ? (typeof job.result === 'string' ? JSON.parse(job.result) : job.result) : null;
-
-  // Handle both URL-based output (DALL-E, Grok, etc.) and base64 output (Gemini)
-  const imageSource = result?.output_url ||
-    (result?.output_data ? `data:image/png;base64,${result.output_data}` : null);
-
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-lg p-2 hover:bg-white/10 transition-colors cursor-pointer">
-      {imageSource ? (
-        <img
-          src={imageSource}
-          alt="Generation"
-          className="w-full aspect-square object-cover rounded"
-        />
-      ) : (
-        <div className="w-full aspect-square bg-gray-800 rounded flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
+      {/* Thumbnail grid for additional images */}
+      {reorderedImages.length > 1 && (
+        <div className="grid grid-cols-3 gap-2">
+          {reorderedImages.slice(1).map((imageData, idx) => {
+            // Calculate original index for display
+            const originalIdx = idx < primaryIndex ? idx : idx + 1;
+            return (
+              <ImageCard
+                key={originalIdx}
+                imageData={imageData}
+                isPrimary={false}
+                index={originalIdx}
+                onClick={() => handleThumbnailClick(idx + 1)}
+              />
+            );
+          })}
         </div>
       )}
-      <div className="mt-1 text-xs text-gray-400 truncate">
-        {new Date(job.created_at).toLocaleDateString()}
-      </div>
     </div>
   );
 };
+
+// Individual Image Card Component
+const ImageCard = ({ imageData, isPrimary, index, onClick }) => {
+  const imageSource = imageData.output_url ||
+    (imageData.output_data ? `data:image/png;base64,${imageData.output_data}` : null);
+
+  if (!imageSource) return null;
+
+  const handleOpenInViewer = async (e) => {
+    e.stopPropagation();
+    // Prefer file_path (actual file path) over output_url (which might be asset:// or http://)
+    const pathToOpen = imageData.file_path || imageData.output_url;
+    if (pathToOpen) {
+      try {
+        await invoke('open_in_default_app', { path: pathToOpen });
+      } catch (error) {
+        console.error('Failed to open image in viewer:', error);
+      }
+    }
+  };
+
+  return (
+    <div
+      className={`relative group ${isPrimary ? '' : 'aspect-square cursor-pointer'}`}
+      onClick={!isPrimary ? onClick : undefined}
+    >
+      <img
+        src={imageSource}
+        alt={`Generated content ${index + 1}`}
+        className={`w-full rounded-lg border border-white/10 ${isPrimary ? '' : 'object-cover h-full'}`}
+      />
+      <div className={`absolute ${isPrimary ? 'top-2 right-2' : 'inset-0 bg-black/50'} flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isPrimary ? '' : 'items-center justify-center'}`}>
+        {(imageData.file_path || imageData.output_url) && (
+          <button
+            onClick={handleOpenInViewer}
+            className={`${isPrimary ? 'px-3 py-1' : 'p-2'} bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1 ${isPrimary ? '' : 'justify-center'}`}
+            title="Open in Viewer"
+          >
+            <ExternalLink className="w-3 h-3" />
+            {isPrimary && 'Open in Viewer'}
+          </button>
+        )}
+      </div>
+      {!isPrimary && (
+        <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+          {index + 1}
+        </div>
+      )}
+    </div>
+  );
+};
+

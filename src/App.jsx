@@ -405,6 +405,8 @@ export default function PromptCraft() {
               setNegativePrompt={(val) => updatePrompt(activeCategory, 'negative', val)}
               modifiers={currentPromptData.modifiers || []}
               setModifiers={(val) => updatePrompt(activeCategory, 'modifiers', val)}
+              params={currentPromptData.params || {}}
+              setParams={(val) => updatePrompt(activeCategory, 'params', val)}
               onOpenSettings={() => {
                 setSettingsInitialTab('enhancement');
                 setShowSettings(true);

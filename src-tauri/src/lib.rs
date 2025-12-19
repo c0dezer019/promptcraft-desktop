@@ -75,7 +75,8 @@ pub fn run() {
             commands::list_providers,
             commands::configure_local_provider,
             commands::check_port,
-            commands::call_ai
+            commands::call_ai,
+            commands::open_in_default_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

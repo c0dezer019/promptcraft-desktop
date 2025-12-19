@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 pub mod processor;
 pub mod providers;
+pub mod utils;
 
 /// Generation request parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +20,7 @@ pub struct GenerationRequest {
 pub struct GenerationResult {
     pub output_url: Option<String>,
     pub output_data: Option<String>,
+    pub file_path: Option<String>,
     pub metadata: serde_json::Value,
 }
 
@@ -163,6 +165,8 @@ impl GenerationService {
                         // This format is required for Tauri v2 to load local files in the webview
                         let file_path_str = file_path.display().to_string();
                         result.output_url = Some(format!("asset://localhost/{}", file_path_str));
+                        // Store the actual file path for opening with system applications
+                        result.file_path = Some(file_path_str);
                         // Clear the base64 data to save space
                         result.output_data = None;
                     }

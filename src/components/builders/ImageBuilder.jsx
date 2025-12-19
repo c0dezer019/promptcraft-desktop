@@ -276,9 +276,9 @@ const StandardImageBuilder = ({
       };
     }
 
-    // Add reference image if present
-    if (params.referenceImage) {
-      parameters.reference_image = params.referenceImage;
+    // Add reference images if present
+    if (params.referenceImages && params.referenceImages.length > 0) {
+      parameters.reference_images = params.referenceImages;
     }
 
     await generate(provider, fullPrompt, model, parameters);
@@ -368,18 +368,14 @@ const StandardImageBuilder = ({
             </div>
           )}
 
-          {/* Reference Image - Show for supported providers */}
-          {(isSDModel || isGoogleImage) && (
+          {/* Reference Images - Show for supported providers */}
+          {(isSDModel || isGoogleImage || isOpenAIImage) && (
             <ReferenceImageUpload
-              referenceImage={params.referenceImage}
-              onImageSelect={(imageData) => setParams({ ...params, referenceImage: imageData })}
-              onImageRemove={() => setParams({ ...params, referenceImage: null })}
+              referenceImages={params.referenceImages || []}
+              onImagesChange={(images) => setParams({ ...params, referenceImages: images })}
               showAdvancedControls={true}
               provider={provider}
-              onParamsChange={(updates) => setParams({
-                ...params,
-                referenceImage: { ...params.referenceImage, ...updates }
-              })}
+              onParamsChange={(updates) => setParams({ ...params, ...updates })}
             />
           )}
 

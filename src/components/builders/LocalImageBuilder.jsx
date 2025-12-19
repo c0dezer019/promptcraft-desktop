@@ -131,9 +131,9 @@ export const LocalImageBuilder = ({
         seed
       };
 
-      // Add reference image if present
-      if (params.referenceImage) {
-        parameters.reference_image = params.referenceImage;
+      // Add reference images if present
+      if (params.referenceImages && params.referenceImages.length > 0) {
+        parameters.reference_images = params.referenceImages;
       }
 
       // Submit generation job
@@ -222,17 +222,13 @@ export const LocalImageBuilder = ({
             />
           </div>
 
-          {/* Reference Image */}
+          {/* Reference Images */}
           <ReferenceImageUpload
-            referenceImage={params.referenceImage}
-            onImageSelect={(imageData) => setParams({ ...params, referenceImage: imageData })}
-            onImageRemove={() => setParams({ ...params, referenceImage: null })}
+            referenceImages={params.referenceImages || []}
+            onImagesChange={(images) => setParams({ ...params, referenceImages: images })}
             showAdvancedControls={true}
             provider={activeTool?.id}
-            onParamsChange={(updates) => setParams({
-              ...params,
-              referenceImage: { ...params.referenceImage, ...updates }
-            })}
+            onParamsChange={(updates) => setParams({ ...params, ...updates })}
           />
 
           {/* Parameters Grid */}

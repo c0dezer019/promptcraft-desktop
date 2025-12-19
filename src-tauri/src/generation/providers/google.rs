@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::super::{GenerationProvider, GenerationRequest, GenerationResult};
-use crate::generation::utils::extract_reference_image;
+use crate::generation::utils::extract_reference_images;
 
 /// Google AI configuration (for Veo video generation and Nano Banana image generation)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,10 +53,23 @@ impl GoogleProvider {
             .get("resolution")
             .and_then(|v| v.as_str());
 
+        // Google Search tool
+        let use_google_search = params
+            .get("google_search")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
         // Build the request body
+        // When Google Search is enabled, we need to support both TEXT and IMAGE modalities
+        let response_modalities = if use_google_search {
+            vec!["TEXT", "IMAGE"]
+        } else {
+            vec!["IMAGE"]
+        };
+
         let mut generation_config = serde_json::json!({
             "candidateCount": n,
-            "responseModalities": ["IMAGE"]
+            "responseModalities": response_modalities
         });
 
         // Add resolution for Gemini 3 Pro Image
@@ -71,23 +84,36 @@ impl GoogleProvider {
             "text": prompt
         })];
 
-        // Add reference image if present
-        if let Some((mime_type, base64_data)) = extract_reference_image(params) {
-            eprintln!("Adding reference image to Gemini request (MIME: {})", mime_type);
-            parts.push(serde_json::json!({
-                "inlineData": {
-                    "mimeType": mime_type,
-                    "data": base64_data
-                }
-            }));
+        // Add reference images if present (Gemini supports up to 14)
+        if let Some(images) = extract_reference_images(params) {
+            let image_count = images.len().min(14); // Limit to 14 images
+            eprintln!("Adding {} reference images to Gemini request", image_count);
+
+            for (index, (mime_type, base64_data)) in images.iter().take(image_count).enumerate() {
+                eprintln!("  Image {}: MIME={}", index + 1, mime_type);
+                parts.push(serde_json::json!({
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": base64_data
+                    }
+                }));
+            }
         }
 
-        let request_body = serde_json::json!({
+        // Build request body with optional Google Search tool
+        let mut request_body = serde_json::json!({
             "contents": [{
                 "parts": parts
             }],
             "generationConfig": generation_config
         });
+
+        // Add Google Search tool if enabled
+        if use_google_search {
+            request_body["tools"] = serde_json::json!([{
+                "google_search": {}
+            }]);
+        }
 
         // Use the Gemini API endpoint
         let url = format!(
@@ -140,6 +166,13 @@ impl GoogleProvider {
             .and_then(|c| c.get("parts"))
             .and_then(|p| p.as_array())
             .ok_or_else(|| anyhow::anyhow!("No content.parts in candidate"))?;
+
+        // Log any text parts (e.g., from Google Search results)
+        for part in parts.iter() {
+            if let Some(text) = part.get("text").and_then(|t| t.as_str()) {
+                eprintln!("Gemini text response: {}", text);
+            }
+        }
 
         // Find the first part with inlineData (the generated image)
         let image_data = parts

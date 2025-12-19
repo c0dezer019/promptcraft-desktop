@@ -8,8 +8,8 @@ import { NODE_TEMPLATES } from '../constants/nodeTemplates';
 export const usePromptManager = () => {
   const [prompts, setPrompts] = useState({
     // Category-level storage (for cross-model prompt retention)
-    image: { main: '', modifiers: [], negative: '', nodes: [], params: { referenceImage: null } },
-    video: { main: '', modifiers: [], params: { referenceImage: null } },
+    image: { main: '', modifiers: [], negative: '', nodes: [], params: { referenceImages: [] } },
+    video: { main: '', modifiers: [], params: { referenceImages: [] } },
     // Legacy tool-specific storage (kept for backward compatibility)
     sora: { main: '', modifiers: [] },
     veo: { main: '', modifiers: [] },

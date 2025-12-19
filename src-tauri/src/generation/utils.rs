@@ -48,7 +48,7 @@ pub fn extract_base64_from_data_url(data_url: &str) -> Result<(String, String), 
     Ok((mime_type, base64_data.to_string()))
 }
 
-/// Extracts reference image data from parameters JSON
+/// Extracts reference image data from parameters JSON (legacy single image)
 ///
 /// # Arguments
 /// * `parameters` - JSON parameters object that may contain `reference_image` field
@@ -57,10 +57,15 @@ pub fn extract_base64_from_data_url(data_url: &str) -> Result<(String, String), 
 /// * `Some((mime_type, base64_data))` - If reference image exists and is valid
 /// * `None` - If no reference image or parsing fails
 pub fn extract_reference_image(parameters: &Value) -> Option<(String, String)> {
-    // Try to get reference_image from parameters
-    let ref_img = parameters.get("reference_image")?;
+    // First try new array format
+    if let Some(images) = extract_reference_images(parameters) {
+        if !images.is_empty() {
+            return Some(images[0].clone());
+        }
+    }
 
-    // Get the data URL from the reference image object
+    // Fallback to legacy single image format
+    let ref_img = parameters.get("reference_image")?;
     let data_url = ref_img.get("data")?.as_str()?;
 
     // Extract base64 and MIME type
@@ -77,6 +82,55 @@ pub fn extract_reference_image(parameters: &Value) -> Option<(String, String)> {
             eprintln!("Failed to extract reference image: {}", e);
             None
         }
+    }
+}
+
+/// Extracts multiple reference images from parameters JSON
+///
+/// # Arguments
+/// * `parameters` - JSON parameters object that may contain `reference_images` array
+///
+/// # Returns
+/// * `Some(Vec<(mime_type, base64_data)>)` - Vector of extracted images
+/// * `None` - If no reference images or parsing fails
+pub fn extract_reference_images(parameters: &Value) -> Option<Vec<(String, String)>> {
+    let ref_imgs_array = parameters.get("reference_images")?.as_array()?;
+
+    if ref_imgs_array.is_empty() {
+        return None;
+    }
+
+    let mut images = Vec::new();
+
+    for (index, ref_img) in ref_imgs_array.iter().enumerate() {
+        let data_url = match ref_img.get("data").and_then(|v| v.as_str()) {
+            Some(url) => url,
+            None => {
+                eprintln!("Warning: reference image {} missing 'data' field", index);
+                continue;
+            }
+        };
+
+        match extract_base64_from_data_url(data_url) {
+            Ok((mime, base64)) => {
+                eprintln!(
+                    "Extracted reference image {}: MIME={}, size={}KB",
+                    index + 1,
+                    mime,
+                    base64.len() / 1024
+                );
+                images.push((mime, base64));
+            }
+            Err(e) => {
+                eprintln!("Failed to extract reference image {}: {}", index, e);
+            }
+        }
+    }
+
+    if images.is_empty() {
+        None
+    } else {
+        Some(images)
     }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, ExternalLink, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Copy, ExternalLink, Trash2, Edit2, Image as ImageIcon, Video, Sparkles, Settings, Hash, Calendar, Clock, ChevronLeft, ChevronRight, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '../../../lib/promptcraft-ui';
@@ -102,6 +102,19 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
         await invoke('open_in_default_app', { path: pathToOpen });
       } catch (error) {
         console.error('Failed to open in viewer:', error);
+      }
+    }
+  };
+
+  // Handle opening with custom application
+  const handleOpenWith = async () => {
+    // Prefer file_path from job result, fallback to raw output URL
+    const pathToOpen = jobResult?.file_path || rawOutputUrl;
+    if (pathToOpen) {
+      try {
+        await invoke('open_with_app', { path: pathToOpen });
+      } catch (error) {
+        console.error('Failed to open with app:', error);
       }
     }
   };
@@ -209,6 +222,16 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Open in Viewer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenWith}
+                    className="flex-1"
+                    title="Open with another application (GIMP, Photoshop, etc.)"
+                  >
+                    <FolderOpen className="w-4 h-4 mr-2" />
+                    Open With...
                   </Button>
                   <Button
                     variant="outline"

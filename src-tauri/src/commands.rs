@@ -256,3 +256,43 @@ pub async fn call_ai(
         .output_data
         .ok_or_else(|| "No text output received".to_string())
 }
+
+/// Open a file or URL in the system's default application
+#[tauri::command]
+pub async fn open_in_default_app(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    // Strip asset protocol prefix if present (asset://localhost/...)
+    // This allows the function to work with both file paths and asset URLs
+    let actual_path = if path.starts_with("asset://localhost/") {
+        path.strip_prefix("asset://localhost/").unwrap_or(&path).to_string()
+    } else {
+        path
+    };
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", &actual_path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&actual_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&actual_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}

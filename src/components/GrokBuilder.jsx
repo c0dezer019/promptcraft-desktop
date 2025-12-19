@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Terminal, Sparkles, Loader2, Plus, Check, X, Zap, Download } from 'lucide-react';
+import { Terminal, Sparkles, Loader2, Plus, Check, X, Zap, ExternalLink } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { TextArea } from '../lib/promptcraft-ui/components/atoms/Input.jsx';
 import { SectionHeader } from '../lib/promptcraft-ui/components/molecules/SectionHeader.jsx';
 import { EnhanceButton } from '../lib/promptcraft-ui/components/molecules/EnhanceButton.jsx';
@@ -29,7 +30,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenS
   const [enhancementError, setEnhancementError] = useState('');
 
   // Generation hooks
-  const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
+  const { generate, generating, error, latestJob } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
 
@@ -182,7 +183,7 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenS
         </div>
 
         {/* Generation Status & Results */}
-        {(error || localError || latestJob || completedJobs.length > 0) && (
+        {(error || localError || latestJob) && (
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <SectionHeader icon={Zap} title="Generation Status" />
 
@@ -215,18 +216,6 @@ export const GrokBuilder = ({ prompt, setPrompt, workflowId = 'default', onOpenS
                       Error: {latestJob.error}
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Completed Jobs List */}
-              {completedJobs.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-300">Recent Generations ({completedJobs.length})</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {completedJobs.slice(0, 6).map((job) => (
-                      <CompletedJobCard key={job.id} job={job} />
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
@@ -268,6 +257,18 @@ const StatusBadge = ({ status }) => {
 const ResultDisplay = ({ result }) => {
   const resultData = typeof result === 'string' ? JSON.parse(result) : result;
 
+  const handleOpenInViewer = async () => {
+    // Prefer file_path (actual file path) over output_url (which might be asset:// or http://)
+    const pathToOpen = resultData.file_path || resultData.output_url;
+    if (pathToOpen) {
+      try {
+        await invoke('open_in_default_app', { path: pathToOpen });
+      } catch (error) {
+        console.error('Failed to open image in viewer:', error);
+      }
+    }
+  };
+
   if (resultData.output_url) {
     return (
       <div className="relative group">
@@ -277,22 +278,15 @@ const ResultDisplay = ({ result }) => {
           className="w-full rounded-lg border border-white/10"
         />
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <a
-            href={resultData.output_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors"
-          >
-            Open Full Size
-          </a>
-          <a
-            href={resultData.output_url}
-            download
-            className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
-          >
-            <Download className="w-3 h-3" />
-            Download
-          </a>
+          {(resultData.file_path || resultData.output_url) && (
+            <button
+              onClick={handleOpenInViewer}
+              className="px-3 py-1 bg-black/70 hover:bg-black/90 text-white text-xs rounded transition-colors flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Open in Viewer
+            </button>
+          )}
         </div>
       </div>
     );
@@ -305,26 +299,3 @@ const ResultDisplay = ({ result }) => {
   );
 };
 
-// Completed Job Card Component
-const CompletedJobCard = ({ job }) => {
-  const result = job.result ? (typeof job.result === 'string' ? JSON.parse(job.result) : job.result) : null;
-
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-lg p-2 hover:bg-white/10 transition-colors cursor-pointer">
-      {result?.output_url ? (
-        <img
-          src={result.output_url}
-          alt="Generation"
-          className="w-full aspect-square object-cover rounded"
-        />
-      ) : (
-        <div className="w-full aspect-square bg-gray-800 rounded flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
-        </div>
-      )}
-      <div className="mt-1 text-xs text-gray-400 truncate">
-        {new Date(job.created_at).toLocaleDateString()}
-      </div>
-    </div>
-  );
-};

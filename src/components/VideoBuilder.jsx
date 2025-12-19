@@ -57,7 +57,7 @@ export const VideoBuilder = ({
   const [resolution, setResolution] = useState('1080p');
 
   // Generation hooks
-  const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
+  const { generate, generating, error, latestJob } = useGeneration(workflowId);
   const { getProviderDisplayName } = useProviders();
   const [localError, setLocalError] = useState(null);
 
@@ -283,7 +283,7 @@ export const VideoBuilder = ({
       </div>
 
       {/* Generation Status & Results */}
-      {(error || localError || latestJob || completedJobs.length > 0) && (
+      {(error || localError || latestJob) && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <SectionHeader icon={Zap} title="Generation Status" />
 
@@ -316,18 +316,6 @@ export const VideoBuilder = ({
                     Error: {latestJob.error}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Completed Jobs List */}
-            {completedJobs.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-300">Recent Generations ({completedJobs.length})</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {completedJobs.slice(0, 6).map((job) => (
-                    <CompletedJobCard key={job.id} job={job} type="video" />
-                  ))}
-                </div>
               </div>
             )}
           </div>
@@ -409,37 +397,6 @@ const ResultDisplay = ({ result, type }) => {
   return (
     <div className="text-sm text-gray-400">
       Result available (no preview)
-    </div>
-  );
-};
-
-// Completed Job Card Component
-const CompletedJobCard = ({ job, type }) => {
-  const result = job.result ? (typeof job.result === 'string' ? JSON.parse(job.result) : job.result) : null;
-
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-lg p-2 hover:bg-white/10 transition-colors cursor-pointer">
-      {result?.output_url ? (
-        type === 'video' ? (
-          <video
-            src={result.output_url}
-            className="w-full aspect-video object-cover rounded"
-          />
-        ) : (
-          <img
-            src={result.output_url}
-            alt="Generation"
-            className="w-full aspect-square object-cover rounded"
-          />
-        )
-      ) : (
-        <div className="w-full aspect-video bg-gray-800 rounded flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
-        </div>
-      )}
-      <div className="mt-1 text-xs text-gray-400 truncate">
-        {new Date(job.created_at).toLocaleDateString()}
-      </div>
     </div>
   );
 };

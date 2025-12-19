@@ -35,7 +35,7 @@ export const MidjourneyBuilder = ({
 
   // Generation hooks
   const { isDesktop } = usePlatform();
-  const { generate, generating, error, latestJob, completedJobs } = useGeneration(workflowId);
+  const { generate, generating, error, latestJob } = useGeneration(workflowId);
   const { getProviderDisplayName, getDefaultModel } = useProviders();
   const [localError, setLocalError] = useState(null);
   const provider = 'midjourney';
@@ -220,18 +220,6 @@ export const MidjourneyBuilder = ({
                 )}
               </div>
             )}
-
-            {/* Completed Jobs List */}
-            {completedJobs.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-300">Recent Generations ({completedJobs.length})</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {completedJobs.slice(0, 6).map((job) => (
-                    <CompletedJobCard key={job.id} job={job} />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
     </div>
@@ -288,26 +276,3 @@ const ResultDisplay = ({ result }) => {
   );
 };
 
-// Completed Job Card Component
-const CompletedJobCard = ({ job }) => {
-  const result = job.result ? (typeof job.result === 'string' ? JSON.parse(job.result) : job.result) : null;
-
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-lg p-2 hover:bg-white/10 transition-colors cursor-pointer">
-      {result?.output_url ? (
-        <img
-          src={result.output_url}
-          alt="Generation"
-          className="w-full aspect-square object-cover rounded"
-        />
-      ) : (
-        <div className="w-full aspect-square bg-gray-800 rounded flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
-        </div>
-      )}
-      <div className="mt-1 text-xs text-gray-400 truncate">
-        {new Date(job.created_at).toLocaleDateString()}
-      </div>
-    </div>
-  );
-};

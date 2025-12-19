@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock, Image, Video, Sparkles } from 'lucide-react';
 import { getModelById } from '../../../constants/models';
 
@@ -7,7 +6,7 @@ import { getModelById } from '../../../constants/models';
  * Shows: thumbnail, title, model, size, generation count
  */
 export function SceneCard({ scene, onClick }) {
-  const { id, name, data, thumbnail, created_at } = scene;
+  const { name, data, thumbnail, created_at } = scene;
   const { category, model, metadata, jobs = [] } = data || {};
 
   // Format date
@@ -136,8 +135,8 @@ export function SceneCard({ scene, onClick }) {
       {/* Sequence Badge (if scene is part of sequence) */}
       {metadata?.sequenceId && (
         <div className="absolute top-3 left-3">
-          <div className="bg-blue-500/90 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm font-medium">
-            Sequence #{metadata.sequenceOrder || '?'}
+          <div className="bg-blue-500/90 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm font-medium max-w-[200px] truncate">
+            {metadata.sequenceName || `Sequence #${metadata.sequenceOrder !== undefined ? metadata.sequenceOrder + 1 : '?'}`}
           </div>
         </div>
       )}

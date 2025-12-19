@@ -14,7 +14,7 @@ import { getModelById } from '../../../constants/models';
  * SceneDetailModal - Expanded CivitAI-style view for scene details
  * Displays: full image, prompts, settings, metadata, variations, sequences
  */
-export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick, onCreateVariation, onCreateSequence }) {
+export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick, onCreateVariation, onCreateSequence, onRemoveFromSequence }) {
   const { isDesktop } = usePlatform();
   const [jobs, setJobs] = useState([]);
   const [selectedJobIndex, setSelectedJobIndex] = useState(0);
@@ -132,12 +132,28 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
   };
 
   // Handle sequence creation
-  const handleCreateSequence = async (sceneIds) => {
+  const handleCreateSequence = async (sceneIds, sequenceName) => {
     if (onCreateSequence) {
-      await onCreateSequence(sceneIds);
+      await onCreateSequence(sceneIds, sequenceName);
       setShowSequenceDialog(false);
     }
   };
+
+  // Handle remove from sequence
+  const handleRemoveFromSequence = async () => {
+    const confirmed = await ask('Remove this scene from its sequence?', {
+      title: 'Remove from Sequence',
+      kind: 'warning',
+    });
+
+    if (confirmed && onRemoveFromSequence) {
+      await onRemoveFromSequence(id);
+      onClose();
+    }
+  };
+
+  // Check if scene is in a sequence
+  const isInSequence = metadata?.sequenceId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
@@ -171,15 +187,27 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
               <GitBranch className="w-4 h-4 mr-2" />
               Create Variation
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSequenceDialog(true)}
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-            >
-              <Film className="w-4 h-4 mr-2" />
-              Add to Sequence
-            </Button>
+            {isInSequence ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveFromSequence}
+                className="text-orange-600 hover:text-orange-700 dark:text-orange-400"
+              >
+                <Film className="w-4 h-4 mr-2" />
+                Remove from Sequence
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSequenceDialog(true)}
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              >
+                <Film className="w-4 h-4 mr-2" />
+                Add to Sequence
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

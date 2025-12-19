@@ -96,7 +96,7 @@ export function SceneRelations({ scene, allScenes, onSceneClick }) {
           <div className="flex items-center gap-2">
             <Film className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Sequence Timeline
+              {metadata?.sequenceName || 'Sequence Timeline'}
             </h3>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               ({sequentialScenes.length + 1} scenes)

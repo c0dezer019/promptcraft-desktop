@@ -7,6 +7,7 @@ import { X, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
  */
 export function CreateSequenceDialog({ scenes, currentScene, onClose, onCreateSequence }) {
   const [selectedScenes, setSelectedScenes] = useState(currentScene ? [currentScene.id] : []);
+  const [sequenceName, setSequenceName] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Filter to same category as current scene
@@ -34,7 +35,7 @@ export function CreateSequenceDialog({ scenes, currentScene, onClose, onCreateSe
   const handleCreate = async () => {
     setCreating(true);
     try {
-      await onCreateSequence(selectedScenes);
+      await onCreateSequence(selectedScenes, sequenceName);
       onClose();
     } catch (err) {
       console.error('Failed to create sequence:', err);
@@ -64,8 +65,25 @@ export function CreateSequenceDialog({ scenes, currentScene, onClose, onCreateSe
           </button>
         </div>
 
+        {/* Sequence Name */}
+        <div className="px-6 pt-6 pb-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Sequence Name (Optional)
+          </label>
+          <input
+            type="text"
+            value={sequenceName}
+            onChange={(e) => setSequenceName(e.target.value)}
+            placeholder="e.g., Character Transformation, Day to Night, Product Showcase"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Give your sequence a descriptive name to identify it easily
+          </p>
+        </div>
+
         {/* Content */}
-        <div className="grid grid-cols-2 gap-6 p-6 max-h-[70vh]">
+        <div className="grid grid-cols-2 gap-6 px-6 pb-6 max-h-[60vh]">
           {/* Available Scenes */}
           <div className="space-y-3 overflow-y-auto">
             <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -144,7 +162,7 @@ export function CreateSequenceDialog({ scenes, currentScene, onClose, onCreateSe
                         </button>
                       </div>
                       <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 w-6">
-                        #{index}
+                        #{index + 1}
                       </span>
                       {scene.thumbnail && (
                         <img

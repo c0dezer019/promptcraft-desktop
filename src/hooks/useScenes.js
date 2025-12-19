@@ -252,8 +252,10 @@ export function useScenes(workflowId = 'default') {
 
   /**
    * Create a new sequence or add scenes to existing sequence
+   * @param {string[]} sceneIds - Array of scene IDs to include in sequence
+   * @param {string} sequenceName - Optional name for the sequence
    */
-  const createSequence = useCallback(async (sceneIds, sequenceId = null) => {
+  const createSequence = useCallback(async (sceneIds, sequenceName = null) => {
     if (!isDesktop) {
       throw new Error('Scenes are only available in desktop mode');
     }
@@ -271,21 +273,28 @@ export function useScenes(workflowId = 'default') {
       throw new Error('All scenes in a sequence must be the same category');
     }
 
-    const sequenceUuid = sequenceId || crypto.randomUUID();
+    const sequenceUuid = crypto.randomUUID();
 
     // Update each scene with sequence metadata
     const updatePromises = sceneIds.map(async (sceneId, index) => {
       const scene = scenes.find(s => s.id === sceneId);
       if (!scene) return null;
 
+      const metadata = {
+        ...scene.data.metadata,
+        sequenceId: sequenceUuid,
+        sequenceOrder: index,
+        tags: [...(scene.data.metadata?.tags || []), 'sequence'].filter((v, i, a) => a.indexOf(v) === i),
+      };
+
+      // Only add sequenceName if it's provided
+      if (sequenceName) {
+        metadata.sequenceName = sequenceName;
+      }
+
       const updatedData = {
         ...scene.data,
-        metadata: {
-          ...scene.data.metadata,
-          sequenceId: sequenceUuid,
-          sequenceOrder: index,
-          tags: [...(scene.data.metadata?.tags || []), 'sequence'].filter((v, i, a) => a.indexOf(v) === i),
-        },
+        metadata,
       };
 
       return await invoke('update_scene', {
@@ -300,6 +309,76 @@ export function useScenes(workflowId = 'default') {
     await loadScenes();
 
     return sequenceUuid;
+  }, [isDesktop, scenes, loadScenes]);
+
+  /**
+   * Remove a scene from its sequence
+   * @param {string} sceneId - Scene ID to remove from sequence
+   */
+  const removeFromSequence = useCallback(async (sceneId) => {
+    if (!isDesktop) {
+      throw new Error('Scenes are only available in desktop mode');
+    }
+
+    const scene = scenes.find(s => s.id === sceneId);
+    if (!scene) {
+      throw new Error('Scene not found');
+    }
+
+    const sequenceId = scene.data?.metadata?.sequenceId;
+    if (!sequenceId) {
+      throw new Error('Scene is not part of a sequence');
+    }
+
+    // Remove sequence metadata from the scene
+    const updatedData = {
+      ...scene.data,
+      metadata: {
+        ...scene.data.metadata,
+        sequenceId: undefined,
+        sequenceOrder: undefined,
+        tags: (scene.data.metadata?.tags || []).filter(tag => tag !== 'sequence'),
+      },
+    };
+
+    // Update the scene
+    await invoke('update_scene', {
+      id: sceneId,
+      input: { data: updatedData },
+    });
+
+    // Get all remaining scenes in the sequence and reorder them
+    const remainingScenes = scenes
+      .filter(s =>
+        s.id !== sceneId &&
+        s.data?.metadata?.sequenceId === sequenceId
+      )
+      .sort((a, b) =>
+        (a.data?.metadata?.sequenceOrder || 0) - (b.data?.metadata?.sequenceOrder || 0)
+      );
+
+    // Reorder remaining scenes
+    const reorderPromises = remainingScenes.map(async (s, index) => {
+      const reorderedData = {
+        ...s.data,
+        metadata: {
+          ...s.data.metadata,
+          sequenceOrder: index,
+        },
+      };
+
+      return await invoke('update_scene', {
+        id: s.id,
+        input: { data: reorderedData },
+      });
+    });
+
+    await Promise.all(reorderPromises);
+
+    // Refresh scenes to reflect changes
+    await loadScenes();
+
+    console.log(`[removeFromSequence] Removed scene ${sceneId} from sequence ${sequenceId}`);
   }, [isDesktop, scenes, loadScenes]);
 
   /**
@@ -368,5 +447,6 @@ export function useScenes(workflowId = 'default') {
     filterScenes,
     createVariation,
     createSequence,
+    removeFromSequence,
   };
 }

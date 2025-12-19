@@ -22,6 +22,7 @@ export function SceneManager({ onLoadScene, onClose }) {
     loadScenes: reloadScenes,
     createVariation,
     createSequence,
+    removeFromSequence,
   } = useScenes('all'); // Load ALL scenes across all workflows
 
   const [selectedScene, setSelectedScene] = useState(null);
@@ -49,16 +50,26 @@ export function SceneManager({ onLoadScene, onClose }) {
   }, [createVariation]);
 
   // Handler for sequence creation
-  const handleCreateSequence = useCallback(async (sceneIds) => {
+  const handleCreateSequence = useCallback(async (sceneIds, sequenceName) => {
     try {
-      const sequenceId = await createSequence(sceneIds);
-      console.log('[SceneManager] Created sequence:', sequenceId);
+      await createSequence(sceneIds, sequenceName);
       setShowSequenceDialog(false);
     } catch (err) {
       console.error('[SceneManager] Failed to create sequence:', err);
       alert('Failed to create sequence: ' + err.message);
     }
   }, [createSequence]);
+
+  // Handler for removing from sequence
+  const handleRemoveFromSequence = useCallback(async (sceneId) => {
+    try {
+      await removeFromSequence(sceneId);
+      console.log('[SceneManager] Removed scene from sequence:', sceneId);
+    } catch (err) {
+      console.error('[SceneManager] Failed to remove from sequence:', err);
+      alert('Failed to remove from sequence: ' + err.message);
+    }
+  }, [removeFromSequence]);
 
   // Delete scene (from useScenes hook)
   const deleteScene = useCallback(async (id) => {
@@ -456,6 +467,7 @@ export function SceneManager({ onLoadScene, onClose }) {
           onSceneClick={setSelectedScene}
           onCreateVariation={handleCreateVariation}
           onCreateSequence={handleCreateSequence}
+          onRemoveFromSequence={handleRemoveFromSequence}
         />
       )}
 

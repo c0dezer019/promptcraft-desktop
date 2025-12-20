@@ -1,13 +1,54 @@
-import { Clock, Image, Video, Sparkles } from 'lucide-react';
+import { Clock, Image, Video, Sparkles, Layers } from 'lucide-react';
 import { getModelById } from '../../../constants/models';
+import { getSceneOutputs } from '../../../hooks/useScenes';
+
+/**
+ * OutputGrid - Display multiple outputs in a grid layout
+ */
+function OutputGrid({ outputs, maxVisible = 4 }) {
+  const visible = outputs.slice(0, maxVisible);
+  const remaining = outputs.length - maxVisible;
+
+  return (
+    <div className="grid grid-cols-2 gap-0.5 w-full h-full">
+      {visible.map((output) => (
+        <div key={output.id} className="relative w-full h-full">
+          {output.type === 'video' ? (
+            <video
+              src={output.url}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={output.url}
+              alt={`Output ${output.order + 1}`}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+      ))}
+      {remaining > 0 && (
+        <div className="flex items-center justify-center bg-black/60 text-white">
+          <span className="text-lg font-semibold">+{remaining}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * SceneCard - Tiled card component for displaying scene thumbnails in grid
  * Shows: thumbnail, title, model, size, generation count
+ * Supports multi-output display (comic panel style)
  */
 export function SceneCard({ scene, onClick }) {
   const { name, data, thumbnail, created_at } = scene;
   const { category, model, metadata, jobs = [] } = data || {};
+
+  // Get outputs (handles both new multi-output and legacy single-thumbnail)
+  const outputs = getSceneOutputs(scene);
+  const hasMultipleOutputs = outputs.length > 1;
 
   // Format date
   const formatDate = (dateString) => {
@@ -44,13 +85,17 @@ export function SceneCard({ scene, onClick }) {
       onClick={() => onClick(scene)}
       className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
     >
-      {/* Thumbnail Image */}
-      {thumbnail ? (
-        <img
-          src={thumbnail}
-          alt={name}
-          className="w-full h-full object-cover"
-        />
+      {/* Thumbnail Image / Multi-Output Grid */}
+      {outputs.length > 0 ? (
+        hasMultipleOutputs ? (
+          <OutputGrid outputs={outputs} maxVisible={4} />
+        ) : (
+          <img
+            src={outputs[0].url}
+            alt={name}
+            className="w-full h-full object-cover"
+          />
+        )
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900">
           <CategoryIcon className="w-16 h-16 text-gray-400 dark:text-gray-600" />
@@ -137,6 +182,16 @@ export function SceneCard({ scene, onClick }) {
         <div className="absolute top-3 left-3">
           <div className="bg-blue-500/90 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm font-medium max-w-[200px] truncate">
             {metadata.sequenceName || `Sequence #${metadata.sequenceOrder !== undefined ? metadata.sequenceOrder + 1 : '?'}`}
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Output Badge (if scene has multiple outputs) */}
+      {hasMultipleOutputs && !metadata?.variationOf && !metadata?.sequenceId && (
+        <div className="absolute top-3 left-3">
+          <div className="flex items-center gap-1.5 bg-green-500/90 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm font-medium">
+            <Layers className="w-3.5 h-3.5" />
+            <span>{outputs.length} outputs</span>
           </div>
         </div>
       )}

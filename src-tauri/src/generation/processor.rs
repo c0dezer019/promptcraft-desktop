@@ -76,6 +76,7 @@ impl JobProcessor {
                         status: Some("failed".to_string()),
                         result: None,
                         error: Some(e.to_string()),
+                        data: None,
                     },
                 )
                 .await;
@@ -99,6 +100,7 @@ impl JobProcessor {
                 status: Some("running".to_string()),
                 result: None,
                 error: None,
+                data: None,
             },
         )
         .await?;
@@ -145,6 +147,7 @@ impl JobProcessor {
                 status: Some("completed".to_string()),
                 result: Some(serde_json::to_value(&result)?),
                 error: None,
+                data: None,
             },
         )
         .await?;

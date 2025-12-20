@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Filter, Download, Trash2, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Eye } from 'lucide-react';
+import { X, Search, Filter, Download, Trash2, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Eye, GitBranch, Film, CheckSquare, Square, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useJobPolling } from '../../lib/promptcraft-ui/hooks/useJobPolling';
@@ -8,6 +8,9 @@ import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform';
 import JobDetailModal from './JobDetailModal';
 import { isValidImageUrl } from '../../utils/urlValidator';
 import { convertToAssetUrl } from '../../utils/fileUrlHelper';
+import { useJobs } from '../../hooks/useJobs';
+import { CreateJobVariationDialog } from './jobs/CreateJobVariationDialog';
+import { useScenes } from '../../hooks/useScenes';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -40,7 +43,141 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreload }) => {
+/**
+ * Save Multi-Output Scene Dialog
+ */
+const SaveMultiOutputSceneDialog = ({ selectedJobIds, jobs, onClose, onSave }) => {
+  const [sceneName, setSceneName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const selectedJobs = jobs.filter(job => selectedJobIds.includes(job.id));
+
+  const handleSave = async () => {
+    if (!sceneName.trim()) {
+      alert('Please enter a scene name');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave(sceneName.trim());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+      <div className="bg-gray-900 rounded-lg max-w-md w-full border border-gray-700">
+        {/* Header */}
+        <div className="border-b border-gray-800 p-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Save Multi-Output Scene</h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {/* Selected Jobs Preview */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Selected Jobs ({selectedJobs.length})
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {selectedJobs.slice(0, 6).map(job => {
+                const jobResult = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
+                const safeOutputUrl = jobResult?.output_url && isValidImageUrl(jobResult.output_url)
+                  ? jobResult.output_url
+                  : null;
+                const base64Data = jobResult?.output_data;
+                const rawImageSource = safeOutputUrl || (base64Data ? `data:image/png;base64,${base64Data}` : null);
+                const imageSource = rawImageSource ? convertToAssetUrl(rawImageSource) : null;
+
+                return (
+                  <div key={job.id} className="aspect-square bg-gray-800 rounded overflow-hidden">
+                    {imageSource ? (
+                      <img
+                        src={imageSource}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-600">
+                        <Loader2 className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {selectedJobs.length > 6 && (
+                <div className="aspect-square bg-gray-800 rounded flex items-center justify-center">
+                  <span className="text-gray-400 text-sm">+{selectedJobs.length - 6} more</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Scene Name Input */}
+          <div>
+            <label htmlFor="scene-name" className="block text-sm font-medium text-gray-300 mb-2">
+              Scene Name
+            </label>
+            <input
+              id="scene-name"
+              type="text"
+              value={sceneName}
+              onChange={(e) => setSceneName(e.target.value)}
+              placeholder="e.g., Comic Panel - Hero's Journey"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              autoFocus
+            />
+          </div>
+
+          {/* Info */}
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+            <p className="text-sm text-blue-300">
+              This will create a multi-output scene with {selectedJobs.length} outputs displayed in a grid layout.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-800 p-4 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded-lg text-sm font-medium text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !sceneName.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Layers className="w-4 h-4" />
+                Create Scene
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreload, selectMode = false, isSelected = false, onToggleSelect }) => {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -106,11 +243,23 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreloa
     }
   };
 
+  const handleCardClick = () => {
+    if (selectMode && onToggleSelect) {
+      onToggleSelect(job.id);
+    } else {
+      onViewDetails(job);
+    }
+  };
+
   return (
     <div
-      onClick={() => onViewDetails(job)}
+      onClick={handleCardClick}
       onMouseEnter={handleMouseEnter}
-      className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
+      className={`bg-gray-800 rounded-lg border transition-all cursor-pointer group ${
+        isSelected
+          ? 'border-blue-500 ring-2 ring-blue-500/50'
+          : 'border-gray-700 hover:border-gray-600'
+      }`}
     >
       {/* Image Preview */}
       {imageSource && (
@@ -122,27 +271,44 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreloa
             referrerPolicy="no-referrer"
             crossOrigin="anonymous"
           />
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-              title="Download"
-            >
-              {downloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-            </button>
-            <button
-              onClick={() => onViewDetails(job)}
-              className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-              title="View Details"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-          </div>
+
+          {/* Selection Checkbox (in select mode) */}
+          {selectMode && (
+            <div className="absolute top-2 left-2 z-10">
+              <div className="bg-gray-900/80 backdrop-blur-sm p-1.5 rounded-lg">
+                {isSelected ? (
+                  <CheckSquare className="w-5 h-5 text-blue-500" />
+                ) : (
+                  <Square className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons (hidden in select mode) */}
+          {!selectMode && (
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                title="Download"
+              >
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={() => onViewDetails(job)}
+                className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                title="View Details"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -158,6 +324,22 @@ const JobCard = ({ job, onViewDetails, onDownload, onDelete, isDesktop, onPreloa
             </div>
           </div>
           <StatusBadge status={job.status} />
+        </div>
+
+        {/* Variation and Sequence Badges */}
+        <div className="flex flex-wrap gap-1.5">
+          {jobData?.variationOf && (
+            <span className="inline-flex items-center gap-1 text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
+              <GitBranch className="w-3 h-3" />
+              Variation
+            </span>
+          )}
+          {jobData?.sequenceId && (
+            <span className="inline-flex items-center gap-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
+              <Film className="w-3 h-3" />
+              {jobData?.sequenceName || 'Sequence'} #{(jobData?.sequenceOrder ?? 0) + 1}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center justify-between text-xs text-gray-400">
@@ -197,7 +379,23 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
   const [providerFilter, setProviderFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showVariationDialog, setShowVariationDialog] = useState(false);
+  const [variationParentJob, setVariationParentJob] = useState(null);
   const preloadedImages = React.useRef(new Set());
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState(new Set());
+  const [showSaveSceneDialog, setShowSaveSceneDialog] = useState(false);
+
+  // Use the jobs hook for variation operations
+  const {
+    createJobVariation,
+    saveJobAsScene
+  } = useJobs(workflowId || 'all');
+
+  // Use the scenes hook for creating multi-output scenes
+  const { createSceneWithOutputs } = useScenes(workflowId || 'default');
 
   // Preload job details on hover
   const handlePreload = React.useCallback((job) => {
@@ -345,6 +543,37 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
     }
   };
 
+  // Multi-select handlers
+  const handleToggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    setSelectedJobs(new Set()); // Clear selection when toggling
+  };
+
+  const handleToggleJobSelection = (jobId) => {
+    setSelectedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSaveAsScene = () => {
+    if (selectedJobs.size < 2) {
+      alert('Please select at least 2 jobs to create a multi-output scene');
+      return;
+    }
+    setShowSaveSceneDialog(true);
+  };
+
+  const handleCancelSelect = () => {
+    setSelectMode(false);
+    setSelectedJobs(new Set());
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -352,20 +581,58 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="border-b border-gray-800 p-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Generation History</h2>
-              <p className="text-sm text-gray-400">
-                {filteredJobs.length} of {jobs.length} jobs
-                {isPolling && <span className="ml-2 text-blue-400">(polling...)</span>}
-              </p>
+          <div className="border-b border-gray-800 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Generation History</h2>
+                <p className="text-sm text-gray-400">
+                  {filteredJobs.length} of {jobs.length} jobs
+                  {isPolling && <span className="ml-2 text-blue-400">(polling...)</span>}
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
+
+            {/* Multi-Select Toolbar */}
+            {selectMode ? (
+              <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <div className="flex-1 text-sm text-white">
+                  <span className="font-medium">{selectedJobs.size} jobs selected</span>
+                  {selectedJobs.size >= 2 && (
+                    <span className="ml-2 text-gray-400">Ready to create scene</span>
+                  )}
+                </div>
+                <button
+                  onClick={handleSaveAsScene}
+                  disabled={selectedJobs.size < 2}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+                >
+                  <Layers className="w-4 h-4" />
+                  Save as Scene
+                </button>
+                <button
+                  onClick={handleCancelSelect}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleToggleSelectMode}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white transition-colors"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Select Multiple
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Filters */}
@@ -449,6 +716,9 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
                     onDelete={handleJobDeleted}
                     onPreload={handlePreload}
                     isDesktop={isDesktop}
+                    selectMode={selectMode}
+                    isSelected={selectedJobs.has(job.id)}
+                    onToggleSelect={handleToggleJobSelection}
                   />
                 ))}
               </div>
@@ -463,7 +733,78 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onRetry={handleRetry}
+        onCreateVariation={(job) => {
+          setVariationParentJob(job);
+          setShowVariationDialog(true);
+        }}
+        onSaveAsScene={saveJobAsScene}
+        allJobs={jobs}
       />
+
+      {/* Variation Dialog */}
+      {showVariationDialog && variationParentJob && (
+        <CreateJobVariationDialog
+          parentJob={variationParentJob}
+          onClose={() => {
+            setShowVariationDialog(false);
+            setVariationParentJob(null);
+          }}
+          onCreateVariation={async (parentJob, modifications) => {
+            await createJobVariation(parentJob, modifications);
+            await loadJobs(); // Reload to show new variation
+          }}
+        />
+      )}
+
+      {/* Save Multi-Output Scene Dialog */}
+      {showSaveSceneDialog && (
+        <SaveMultiOutputSceneDialog
+          selectedJobIds={Array.from(selectedJobs)}
+          jobs={jobs}
+          onClose={() => setShowSaveSceneDialog(false)}
+          onSave={async (sceneName) => {
+            try {
+              // Get the selected job objects
+              const selectedJobObjects = jobs.filter(job => selectedJobs.has(job.id));
+
+              // Validate all jobs are completed
+              const incompletedJobs = selectedJobObjects.filter(job => job.status !== 'completed');
+              if (incompletedJobs.length > 0) {
+                alert('All selected jobs must be completed before creating a scene');
+                return;
+              }
+
+              // Validate all jobs are same category
+              const categories = new Set(
+                selectedJobObjects.map(job => {
+                  const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
+                  return jobData.category;
+                })
+              );
+
+              if (categories.size > 1) {
+                alert('All selected jobs must be the same category (all images or all videos)');
+                return;
+              }
+
+              const category = Array.from(categories)[0];
+
+              // Create the multi-output scene
+              await createSceneWithOutputs(sceneName, selectedJobObjects, category);
+
+              // Reset select mode
+              setSelectMode(false);
+              setSelectedJobs(new Set());
+              setShowSaveSceneDialog(false);
+
+              alert('Multi-output scene created successfully!');
+            } catch (error) {
+              console.error('Failed to create multi-output scene:', error);
+              alert('Failed to create scene: ' + error.message);
+            }
+          }}
+        />
+      )}
     </>
   );
 }

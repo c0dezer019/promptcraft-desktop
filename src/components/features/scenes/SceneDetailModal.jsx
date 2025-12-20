@@ -9,12 +9,14 @@ import { CreateSequenceDialog } from './CreateSequenceDialog';
 import { convertToAssetUrl } from '../../../utils/fileUrlHelper';
 import { usePlatform } from '../../../lib/promptcraft-ui/hooks/usePlatform';
 import { getModelById } from '../../../constants/models';
+import { getSceneOutputs } from '../../../hooks/useScenes';
+import SceneOutputsGallery from './SceneOutputsGallery';
 
 /**
  * SceneDetailModal - Expanded CivitAI-style view for scene details
  * Displays: full image, prompts, settings, metadata, variations, sequences
  */
-export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSceneJobs, allScenes = [], onSceneClick, onCreateVariation, onCreateSequence, onRemoveFromSequence }) {
+export function SceneDetailModal({ scene, onClose, onDelete, onUpdateScene, onLoadScene, getSceneJobs, allScenes = [], onSceneClick, onCreateVariation, onCreateSequence, onRemoveFromSequence }) {
   const { isDesktop } = usePlatform();
   const [jobs, setJobs] = useState([]);
   const [selectedJobIndex, setSelectedJobIndex] = useState(0);
@@ -29,6 +31,10 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
   // Get model display name
   const modelInfo = model ? getModelById(model) : null;
   const modelDisplayName = modelInfo?.name || model || 'Unknown';
+
+  // Get scene outputs (handles both multi-output and legacy single-thumbnail scenes)
+  const outputs = getSceneOutputs(scene);
+  const hasMultipleOutputs = outputs.length > 1;
 
   // Load jobs for this scene
   useEffect(() => {
@@ -93,6 +99,35 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
 
     await onDelete(id);
     onClose();
+  };
+
+  // Handle reordering outputs in multi-output scenes
+  const handleReorderOutputs = async (reorderedOutputs) => {
+    if (!onUpdateScene) {
+      console.warn('onUpdateScene prop not provided');
+      return;
+    }
+
+    try {
+      // Update the order property for each output
+      const updatedOutputs = reorderedOutputs.map((output, index) => ({
+        ...output,
+        order: index
+      }));
+
+      // Update the scene's data with the new outputs order
+      await onUpdateScene(id, {
+        data: {
+          ...data,
+          outputs: updatedOutputs
+        }
+      });
+
+      console.log('[SceneDetailModal] Outputs reordered successfully');
+    } catch (err) {
+      console.error('[SceneDetailModal] Failed to reorder outputs:', err);
+      alert('Failed to save new order: ' + err.message);
+    }
   };
 
   const CategoryIcon = category === 'video' ? Video : ImageIcon;
@@ -231,51 +266,63 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
             {/* Left Column - Image/Video */}
             <div className="space-y-4">
-              {/* Main Image */}
-              <div className="relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square">
-                {outputUrl ? (
-                  category === 'video' ? (
-                    <video
-                      src={outputUrl}
-                      controls
-                      className="w-full h-full object-contain"
-                    />
+              {/* Multi-Output Gallery or Single Image/Video */}
+              {hasMultipleOutputs ? (
+                <div className="rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <SceneOutputsGallery
+                    outputs={outputs}
+                    category={category}
+                    layout="grid"
+                    editable={true}
+                    onReorder={handleReorderOutputs}
+                  />
+                </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square">
+                  {outputUrl ? (
+                    category === 'video' ? (
+                      <video
+                        src={outputUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <img
+                        src={outputUrl}
+                        alt={name}
+                        className="w-full h-full object-contain"
+                      />
+                    )
                   ) : (
-                    <img
-                      src={outputUrl}
-                      alt={name}
-                      className="w-full h-full object-contain"
-                    />
-                  )
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <CategoryIcon className="w-24 h-24 text-gray-400" />
-                  </div>
-                )}
-
-                {/* Job Navigation (if multiple generations) */}
-                {jobs.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedJobIndex(Math.max(0, selectedJobIndex - 1))}
-                      disabled={selectedJobIndex === 0}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedJobIndex(Math.min(jobs.length - 1, selectedJobIndex + 1))}
-                      disabled={selectedJobIndex === jobs.length - 1}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full backdrop-blur-sm">
-                      {selectedJobIndex + 1} / {jobs.length}
+                    <div className="w-full h-full flex items-center justify-center">
+                      <CategoryIcon className="w-24 h-24 text-gray-400" />
                     </div>
-                  </>
-                )}
-              </div>
+                  )}
+
+                  {/* Job Navigation (if multiple generations and not multi-output scene) */}
+                  {jobs.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setSelectedJobIndex(Math.max(0, selectedJobIndex - 1))}
+                        disabled={selectedJobIndex === 0}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedJobIndex(Math.min(jobs.length - 1, selectedJobIndex + 1))}
+                        disabled={selectedJobIndex === jobs.length - 1}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full backdrop-blur-sm">
+                        {selectedJobIndex + 1} / {jobs.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Open in Viewer/Copy Actions */}
               {outputUrl && (
@@ -443,16 +490,18 @@ export function SceneDetailModal({ scene, onClose, onDelete, onLoadScene, getSce
                     Generation Settings
                   </h3>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
-                    {Object.entries(prompt?.params || params || {}).map(([key, value]) => (
-                      <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400 capitalize">
-                          {key.replace(/_/g, ' ')}:
-                        </span>
-                        <span className="text-gray-900 dark:text-white font-medium">
-                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                        </span>
-                      </div>
-                    ))}
+                    {Object.entries(prompt?.params || params || {})
+                      .filter(([key]) => key !== 'outputs' && key !== 'jobs') // Exclude internal data structures
+                      .map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400 capitalize">
+                            {key.replace(/_/g, ' ')}:
+                          </span>
+                          <span className="text-gray-900 dark:text-white font-medium">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}

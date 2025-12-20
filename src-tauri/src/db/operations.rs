@@ -288,6 +288,15 @@ impl JobOps {
                 .await?;
         }
 
+        if let Some(data) = &input.data {
+            let data_str = serde_json::to_string(data)?;
+            sqlx::query("UPDATE jobs SET data = ? WHERE id = ?")
+                .bind(&data_str)
+                .bind(id)
+                .execute(pool)
+                .await?;
+        }
+
         let job = Self::get(pool, id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Job not found"))?;

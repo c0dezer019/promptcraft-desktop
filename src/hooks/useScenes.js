@@ -4,6 +4,40 @@ import { invoke } from '@tauri-apps/api/core';
 import { getModelProvider } from '../constants/models';
 
 /**
+ * Helper function to extract outputs from a scene (handles legacy formats)
+ * @param {object} scene - Scene object
+ * @returns {Array} Array of output objects
+ */
+export function getSceneOutputs(scene) {
+  // Case 1: Scene has outputs array (new format)
+  if (scene.data?.outputs && Array.isArray(scene.data.outputs)) {
+    return scene.data.outputs;
+  }
+
+  // Case 2: Scene has thumbnail but no outputs (legacy single-image)
+  if (scene.thumbnail) {
+    return [
+      {
+        id: 'legacy-thumb',
+        type: scene.data?.category || 'image',
+        url: scene.thumbnail,
+        order: 0,
+        metadata: {}
+      }
+    ];
+  }
+
+  // Case 3: Scene has jobs array - return empty (requires async loading)
+  if (scene.data?.jobs && scene.data.jobs.length > 0) {
+    // This requires async loading - show placeholder initially
+    return [];
+  }
+
+  // Case 4: No outputs at all
+  return [];
+}
+
+/**
  * Custom hook for managing scenes (generation history with metadata)
  * Integrates with Tauri backend SQLite database
  * @param {string} workflowId - Workflow ID to load scenes for, or 'all' to load all scenes
@@ -86,6 +120,72 @@ export function useScenes(workflowId = 'default') {
   }, [isDesktop, workflowId]);
 
   /**
+   * Create a multi-output scene from multiple jobs
+   * @param {string} name - Scene name
+   * @param {Array} outputJobs - Array of job objects to include as outputs
+   * @param {string} category - Category ('image' or 'video')
+   * @param {object} metadata - Additional metadata (tags, sequenceId, etc.)
+   */
+  const createSceneWithOutputs = useCallback(async (name, outputJobs, category, metadata = {}) => {
+    if (!isDesktop) {
+      throw new Error('Scenes are only available in desktop mode');
+    }
+
+    // CRITICAL: Validate category consistency
+    const invalidJobs = outputJobs.filter(job => {
+      const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
+      return jobData.category !== category;
+    });
+
+    if (invalidJobs.length > 0) {
+      throw new Error(`All outputs must match scene category: ${category}`);
+    }
+
+    // Build outputs array from jobs
+    const outputs = outputJobs.map((job, index) => {
+      const result = job.result ? JSON.parse(job.result) : null;
+      return {
+        id: crypto.randomUUID(),
+        type: category,
+        url: result?.output_url || result?.file_path || null,
+        jobId: job.id,
+        order: index,
+        metadata: {
+          width: result?.width,
+          height: result?.height,
+          format: result?.format
+        }
+      };
+    });
+
+    // Use first job's data as template for scene prompt/model
+    const firstJob = outputJobs[0];
+    const firstJobData = typeof firstJob.data === 'string' ? JSON.parse(firstJob.data) : firstJob.data;
+
+    const sceneData = {
+      category,
+      model: firstJobData.model,
+      prompt: {
+        main: firstJobData.prompt || '',
+        negative: firstJobData.negative_prompt || '',
+        modifiers: [],
+        params: firstJobData.parameters || {}
+      },
+      outputs,
+      metadata: {
+        ...metadata,
+        createdFrom: 'multi-job'
+      },
+      jobs: outputJobs.map(j => j.id)
+    };
+
+    // Thumbnail = first output's URL
+    const thumbnail = outputs[0]?.url || null;
+
+    return await createScene(name, sceneData, thumbnail);
+  }, [isDesktop, createScene]);
+
+  /**
    * Delete a scene
    * @param {string} sceneId - Scene ID to delete
    */
@@ -155,7 +255,8 @@ export function useScenes(workflowId = 'default') {
 
   /**
    * Create a variation of an existing scene
-   * Copies scene data but marks it as a variation and triggers generation
+   * DEPRECATED: Use createJobVariation instead for job-based variations
+   * This is kept for backwards compatibility with existing scene-based workflows
    */
   const createVariation = useCallback(async (parentScene, modifications = {}) => {
     if (!isDesktop) {
@@ -441,6 +542,7 @@ export function useScenes(workflowId = 'default') {
     error,
     loadScenes,
     createScene,
+    createSceneWithOutputs,
     deleteScene,
     updateScene,
     getSceneJobs,

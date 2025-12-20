@@ -34,3 +34,4 @@ dist-ssr
 src-tauri/target
 src-tauri/Cargo.lock
 CLAUDE.md
+.claude

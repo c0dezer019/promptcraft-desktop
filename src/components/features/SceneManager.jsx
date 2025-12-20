@@ -20,6 +20,7 @@ export function SceneManager({ onLoadScene, onClose }) {
     loading,
     error,
     loadScenes: reloadScenes,
+    updateScene,
     createVariation,
     createSequence,
     removeFromSequence,
@@ -98,6 +99,8 @@ export function SceneManager({ onLoadScene, onClose }) {
   }, [isDesktop]);
 
   // Scenes auto-load via useScenes hook
+  // Note: Removed auto-refresh (was causing loading spinner every 5s)
+  // Users can manually refresh by reopening Scene Manager
 
   // Get unique models and tags from scenes
   const { availableModels, availableTags } = useMemo(() => {
@@ -177,15 +180,6 @@ export function SceneManager({ onLoadScene, onClose }) {
   };
 
   const hasActiveFilters = searchQuery || filters.category || filters.model || filters.tags.length > 0;
-
-  // Auto-refresh scenes every 5 seconds to pick up new scenes created elsewhere
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      reloadScenes();
-    }, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [reloadScenes]);
 
   return (
     <div className="fixed inset-0 z-40 bg-white dark:bg-gray-900">
@@ -461,6 +455,7 @@ export function SceneManager({ onLoadScene, onClose }) {
           scene={selectedScene}
           onClose={() => setSelectedScene(null)}
           onDelete={deleteScene}
+          onUpdateScene={updateScene}
           onLoadScene={onLoadScene}
           getSceneJobs={getSceneJobs}
           allScenes={scenes}

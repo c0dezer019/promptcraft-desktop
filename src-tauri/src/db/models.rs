@@ -94,6 +94,7 @@ pub struct UpdateJobInput {
     pub status: Option<String>,
     pub result: Option<serde_json::Value>,
     pub error: Option<String>,
+    pub data: Option<serde_json::Value>,
 }
 
 /// Generate a UTC timestamp string

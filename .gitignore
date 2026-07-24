@@ -32,6 +32,8 @@ dist-ssr
 
 # Tauri
 src-tauri/target
-src-tauri/Cargo.lock
+# Cargo.lock is tracked: this ships a binary, so builds must be reproducible
+# and the Rust crate versions must stay in lockstep with the npm @tauri-apps/*
+# packages. Leaving it untracked let the two drift out of sync.
 .claude
 docs/

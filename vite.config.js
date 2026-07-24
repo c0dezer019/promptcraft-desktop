@@ -18,8 +18,8 @@ export default defineConfig(async () => ({
   //    invisible to `pnpm dev`).
   build: {
     target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
-    minify: !process.env.TAURI_ENV_DEBUG,
-    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    minify: process.env.TAURI_ENV_DEBUG !== "true",
+    sourcemap: process.env.TAURI_ENV_DEBUG === "true",
   },
   // 3. tauri expects a fixed port, fail if that port is not available
   server: {

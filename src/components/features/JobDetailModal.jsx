@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle2, XCircle, Loader2, Clock, Download, RefreshCw, Copy, Check, Save } from 'lucide-react';
+import { X, CheckCircle2, XCircle, Loader2, Clock, Download, RefreshCw, Copy, Check, Save, GitBranch, Film } from 'lucide-react';
 import { downloadJobResult } from '../../utils/downloadHelper';
 import { usePlatform } from '../../lib/promptcraft-ui/hooks/usePlatform';
 import { isValidImageUrl } from '../../utils/urlValidator';
@@ -76,7 +76,7 @@ const CopyableField = ({ label, value }) => {
   );
 };
 
-export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
+export default function JobDetailModal({ job, isOpen, onClose, onRetry, onCreateVariation, onSaveAsScene, allJobs = [] }) {
   const { isDesktop } = usePlatform();
   const [downloading, setDownloading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -145,6 +145,13 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
     }
   };
 
+  const handleCreateVariation = () => {
+    if (onCreateVariation) {
+      onCreateVariation(job);
+      onClose();
+    }
+  };
+
   const handleSaveAsScene = async () => {
     if (!isDesktop || job.status !== 'completed') {
       console.log('[JobDetailModal] Cannot save scene - isDesktop:', isDesktop, 'status:', job.status);
@@ -154,6 +161,18 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
     try {
       setSaving(true);
       console.log('[JobDetailModal] Starting save as scene for job:', job.id);
+
+      // Use new onSaveAsScene prop if available (from useJobs hook)
+      if (onSaveAsScene) {
+        const promptPreview = jobData.prompt?.substring(0, 50) || 'Generation';
+        const sceneName = `${promptPreview}${jobData.prompt?.length > 50 ? '...' : ''}`;
+        await onSaveAsScene(job, sceneName);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+        return;
+      }
+
+      // Fallback to old implementation
       console.log('[JobDetailModal] Job data:', jobData);
       console.log('[JobDetailModal] Job result:', jobResult);
 
@@ -224,7 +243,21 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
             <StatusIcon status={job.status} />
             <div>
               <h2 className="text-lg font-semibold text-white">Job Details</h2>
-              <p className="text-sm text-gray-400">ID: {job.id}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm text-gray-400">ID: {job.id}</p>
+                {jobData?.variationOf && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                    <GitBranch className="w-3 h-3" />
+                    Variation
+                  </span>
+                )}
+                {jobData?.sequenceId && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                    <Film className="w-3 h-3" />
+                    {jobData?.sequenceName || 'Sequence'} #{(jobData?.sequenceOrder ?? 0) + 1}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button
@@ -381,28 +414,37 @@ export default function JobDetailModal({ job, isOpen, onClose, onRetry }) {
         <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 flex justify-between gap-3">
           <div className="flex gap-3">
             {job.status === 'completed' && isDesktop && (
-              <button
-                onClick={handleSaveAsScene}
-                disabled={saving || saved}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : saved ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Saved!
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Save as Scene
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={handleSaveAsScene}
+                  disabled={saving || saved}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saved ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save as Scene
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCreateVariation}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                >
+                  <GitBranch className="w-4 h-4" />
+                  Create Variation
+                </button>
+              </>
             )}
             {job.status === 'failed' && onRetry && (
               <button

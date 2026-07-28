@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Grid3x3, List, Filter, X, Plus, Image as ImageIcon, Video, Sparkles } from 'lucide-react';
+import { Search, Grid3x3, List, Filter, X, Plus, Image as ImageIcon, Video, Sparkles, Film } from 'lucide-react';
 import { Button, Input } from '../../lib/promptcraft-ui';
 import { invoke } from '@tauri-apps/api/core';
 import { usePlatform } from '../../lib/promptcraft-ui';
+import { useScenes } from '../../hooks/useScenes';
 import { SceneCard } from './scenes/SceneCard';
 import { SceneDetailModal } from './scenes/SceneDetailModal';
+import { CreateSequenceDialog } from './scenes/CreateSequenceDialog';
 import { getModelById } from '../../constants/models';
 
 /**
@@ -13,9 +15,17 @@ import { getModelById } from '../../constants/models';
  */
 export function SceneManager({ onLoadScene, onClose }) {
   const { isDesktop } = usePlatform();
-  const [scenes, setScenes] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const {
+    scenes,
+    loading,
+    error,
+    loadScenes: reloadScenes,
+    updateScene,
+    createVariation,
+    createSequence,
+    removeFromSequence,
+  } = useScenes('all'); // Load ALL scenes across all workflows
+
   const [selectedScene, setSelectedScene] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -25,62 +35,75 @@ export function SceneManager({ onLoadScene, onClose }) {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [showSequenceDialog, setShowSequenceDialog] = useState(false);
 
-  // Load all scenes from all workflows
-  const loadScenes = useCallback(async () => {
-    if (!isDesktop) return;
-
-    setLoading(true);
-    setError(null);
-
+  // Handler for variation creation
+  const handleCreateVariation = useCallback(async (parentScene, modifications) => {
     try {
-      const data = await invoke('list_all_scenes');
-
-      // Parse JSON data field for each scene
-      const parsedScenes = data.map(scene => ({
-        ...scene,
-        data: typeof scene.data === 'string' ? JSON.parse(scene.data) : scene.data,
-      }));
-
-      setScenes(parsedScenes);
+      const newScene = await createVariation(parentScene, modifications);
+      console.log('[SceneManager] Created variation:', newScene);
+      // Optionally, open the new scene
+      // setSelectedScene(newScene);
     } catch (err) {
-      console.error('Failed to load scenes:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      console.error('[SceneManager] Failed to create variation:', err);
+      alert('Failed to create variation: ' + err.message);
     }
-  }, [isDesktop]);
+  }, [createVariation]);
 
-  // Delete a scene
+  // Handler for sequence creation
+  const handleCreateSequence = useCallback(async (sceneIds, sequenceName) => {
+    try {
+      await createSequence(sceneIds, sequenceName);
+      setShowSequenceDialog(false);
+    } catch (err) {
+      console.error('[SceneManager] Failed to create sequence:', err);
+      alert('Failed to create sequence: ' + err.message);
+    }
+  }, [createSequence]);
+
+  // Handler for removing from sequence
+  const handleRemoveFromSequence = useCallback(async (sceneId) => {
+    try {
+      await removeFromSequence(sceneId);
+      console.log('[SceneManager] Removed scene from sequence:', sceneId);
+    } catch (err) {
+      console.error('[SceneManager] Failed to remove from sequence:', err);
+      alert('Failed to remove from sequence: ' + err.message);
+    }
+  }, [removeFromSequence]);
+
+  // Delete scene (from useScenes hook)
   const deleteScene = useCallback(async (id) => {
-    if (!isDesktop) return;
-
+    // The deleteScene function is already available from useScenes hook
+    // But we need to call it via invoke since we didn't destructure it
     try {
       await invoke('delete_scene', { id });
-      setScenes(prev => prev.filter(s => s.id !== id));
+      await reloadScenes();
     } catch (err) {
       console.error('Failed to delete scene:', err);
       throw err;
     }
-  }, [isDesktop]);
+  }, [reloadScenes]);
 
-  // Get jobs for a scene (stub - not implemented yet)
+  // Get jobs for a scene - the manager loads scenes from every workflow, so
+  // jobs must be queried against the scene's own workflow, not 'default'.
   const getSceneJobs = useCallback(async (sceneId) => {
     if (!isDesktop) return [];
 
     try {
-      const jobs = await invoke('list_jobs', { workflowId: 'default' });
+      const scene = scenes.find(s => s.id === sceneId);
+      const workflowId = scene?.workflow_id || 'default';
+      const jobs = await invoke('list_jobs', { workflowId });
       return jobs.filter(job => job.scene_id === sceneId);
     } catch (err) {
       console.error('Failed to get scene jobs:', err);
       return [];
     }
-  }, [isDesktop]);
+  }, [isDesktop, scenes]);
 
-  // Load scenes on mount
-  useEffect(() => {
-    loadScenes();
-  }, [loadScenes]);
+  // Scenes auto-load via useScenes hook
+  // Note: Removed auto-refresh (was causing loading spinner every 5s)
+  // Users can manually refresh by reopening Scene Manager
 
   // Get unique models and tags from scenes
   const { availableModels, availableTags } = useMemo(() => {
@@ -161,15 +184,6 @@ export function SceneManager({ onLoadScene, onClose }) {
 
   const hasActiveFilters = searchQuery || filters.category || filters.model || filters.tags.length > 0;
 
-  // Auto-refresh scenes every 5 seconds to pick up new scenes created elsewhere
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      loadScenes();
-    }, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [loadScenes]);
-
   return (
     <div className="fixed inset-0 z-40 bg-white dark:bg-gray-900">
       {/* Header */}
@@ -223,6 +237,17 @@ export function SceneManager({ onLoadScene, onClose }) {
                     {(filters.category ? 1 : 0) + (filters.model ? 1 : 0) + filters.tags.length}
                   </span>
                 )}
+              </Button>
+
+              {/* Create Sequence Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSequenceDialog(true)}
+                className="text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+              >
+                <Film className="w-4 h-4 mr-2" />
+                Create Sequence
               </Button>
 
               {/* Close Button */}
@@ -433,10 +458,24 @@ export function SceneManager({ onLoadScene, onClose }) {
           scene={selectedScene}
           onClose={() => setSelectedScene(null)}
           onDelete={deleteScene}
+          onUpdateScene={updateScene}
           onLoadScene={onLoadScene}
           getSceneJobs={getSceneJobs}
           allScenes={scenes}
           onSceneClick={setSelectedScene}
+          onCreateVariation={handleCreateVariation}
+          onCreateSequence={handleCreateSequence}
+          onRemoveFromSequence={handleRemoveFromSequence}
+        />
+      )}
+
+      {/* Sequence Dialog (from toolbar) */}
+      {showSequenceDialog && (
+        <CreateSequenceDialog
+          scenes={scenes}
+          currentScene={null}
+          onClose={() => setShowSequenceDialog(false)}
+          onCreateSequence={handleCreateSequence}
         />
       )}
     </div>

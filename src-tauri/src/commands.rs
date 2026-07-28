@@ -84,6 +84,24 @@ pub async fn delete_scene(db: State<'_, Database>, id: String) -> Result<(), Str
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn get_scene(db: State<'_, Database>, id: String) -> Result<Option<Scene>, String> {
+    SceneOps::get(db.pool(), &id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_scene(
+    db: State<'_, Database>,
+    id: String,
+    input: UpdateSceneInput,
+) -> Result<Scene, String> {
+    SceneOps::update(db.pool(), &id, input)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Job Commands
 #[tauri::command]
 pub async fn create_job(db: State<'_, Database>, input: CreateJobInput) -> Result<Job, String> {
@@ -255,6 +273,43 @@ pub async fn call_ai(
     result
         .output_data
         .ok_or_else(|| "No text output received".to_string())
+}
+
+/// Read an image file and convert it to base64 data URL
+#[tauri::command]
+pub async fn image_to_base64(path: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose};
+
+    // Strip asset protocol prefix if present (asset://localhost/...)
+    let actual_path = if path.starts_with("asset://localhost/") {
+        path.strip_prefix("asset://localhost/").unwrap_or(&path)
+    } else {
+        &path
+    };
+
+    // Read file bytes
+    let bytes = tokio::fs::read(actual_path)
+        .await
+        .map_err(|e| format!("Failed to read image file: {}", e))?;
+
+    // Detect MIME type from file extension
+    let mime_type = if actual_path.ends_with(".png") {
+        "image/png"
+    } else if actual_path.ends_with(".jpg") || actual_path.ends_with(".jpeg") {
+        "image/jpeg"
+    } else if actual_path.ends_with(".gif") {
+        "image/gif"
+    } else if actual_path.ends_with(".webp") {
+        "image/webp"
+    } else {
+        "image/png" // default fallback
+    };
+
+    // Encode to base64
+    let base64_data = general_purpose::STANDARD.encode(&bytes);
+
+    // Return data URL
+    Ok(format!("data:{};base64,{}", mime_type, base64_data))
 }
 
 /// Open a file or URL in the system's default application

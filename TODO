@@ -1,3 +1,14 @@
 Todos:
     ☐ Image Analysis workflow optimization
-    ☐ Fix local config settings
+    ✔ Fix local config settings @done(25-12-19 23:28)
+Scene Manager:
+    ☐ Auto-save
+    ☐ Scene collections
+    ☐ Batch ops
+    ☐ Export/import feature
+    ☐ Scene comparison
+    ☐ Smart tags
+    ☐ Version control
+    Sequences:
+        ☐ Sequence viewer
+        ☐ Sequence control

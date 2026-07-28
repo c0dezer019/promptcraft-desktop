@@ -212,9 +212,17 @@ MIT © PromptCraft
     - [ ] Probably a node workflow like ComfyUI.
   - [x] Build workflows directly in-app.
 - [ ] Scene documentation.
-- [ ] Archive of previous generations produced in-app.
-- [ ] Reloadable workflows/scenes for regeneration.
+- [x] Archive of previous generations produced in-app.
+- [x] Reloadable workflows/scenes for regeneration.
 - [ ] About section
 - [ ] User Manual
 - [ ] Auto-updater
 - [ ] Ability to purchase tokens for easier (and cheaper) generation of content across multiple services.
+- [ ] SceneManager
+  - [ ] **Auto-save**: Automatically create scenes from successful generations
+  - [ ] **Scene Collections**: Group scenes into folders/projects
+  - [ ] **Batch Operations**: Select and delete multiple scenes
+  - [ ] **Export/Import**: Share scene libraries
+  - [ ] **Scene Comparison**: Side-by-side view of variations
+  - [ ] **Smart Tags**: AI-powered tag suggestions
+  - [ ] **Version Control**: Track prompt iterations

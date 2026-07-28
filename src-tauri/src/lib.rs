@@ -60,6 +60,8 @@ pub fn run() {
             commands::update_workflow,
             commands::delete_workflow,
             commands::create_scene,
+            commands::get_scene,
+            commands::update_scene,
             commands::list_scenes,
             commands::list_all_scenes,
             commands::delete_scene,
@@ -76,6 +78,7 @@ pub fn run() {
             commands::configure_local_provider,
             commands::check_port,
             commands::call_ai,
+            commands::image_to_base64,
             commands::open_in_default_app,
             commands::open_with_app
         ])

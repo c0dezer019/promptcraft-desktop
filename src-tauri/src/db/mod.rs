@@ -83,6 +83,34 @@ impl Database {
         eprintln!("[Database] Creating jobs table...");
         sqlx::query(schema::CREATE_JOBS_TABLE).execute(pool).await?;
 
+        eprintln!("[Database] Ensuring default workflow exists...");
+        // Create default workflow if it doesn't exist
+        let workflow_count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM workflows WHERE id = 'default'"
+        )
+        .fetch_one(pool)
+        .await?;
+
+        if workflow_count.0 == 0 {
+            eprintln!("[Database] Creating default workflow...");
+            use models::*;
+            let now = now();
+            sqlx::query(
+                "INSERT INTO workflows (id, name, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+            )
+            .bind("default")
+            .bind("Default Workflow")
+            .bind("general")
+            .bind("{}")
+            .bind(&now)
+            .bind(&now)
+            .execute(pool)
+            .await?;
+            eprintln!("[Database] Default workflow created successfully");
+        } else {
+            eprintln!("[Database] Default workflow already exists");
+        }
+
         eprintln!("[Database] All migrations completed successfully!");
 
         // Verify tables were created

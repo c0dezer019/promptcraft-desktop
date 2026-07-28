@@ -10,7 +10,9 @@ import { isValidImageUrl } from '../../utils/urlValidator';
 import { convertToAssetUrl } from '../../utils/fileUrlHelper';
 import { useJobs } from '../../hooks/useJobs';
 import { CreateJobVariationDialog } from './jobs/CreateJobVariationDialog';
+import { CreateJobSequenceDialog } from './jobs/CreateJobSequenceDialog';
 import { useScenes } from '../../hooks/useScenes';
+import { getModelCategory } from '../../constants/models';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -381,6 +383,7 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showVariationDialog, setShowVariationDialog] = useState(false);
   const [variationParentJob, setVariationParentJob] = useState(null);
+  const [showSequenceDialog, setShowSequenceDialog] = useState(false);
   const preloadedImages = React.useRef(new Set());
 
   // Multi-select state
@@ -388,10 +391,11 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
   const [selectedJobs, setSelectedJobs] = useState(new Set());
   const [showSaveSceneDialog, setShowSaveSceneDialog] = useState(false);
 
-  // Use the jobs hook for variation operations
+  // Use the jobs hook for variation/sequence operations
   const {
     createJobVariation,
-    saveJobAsScene
+    saveJobAsScene,
+    createJobSequence
   } = useJobs(workflowId || 'all');
 
   // Use the scenes hook for creating multi-output scenes
@@ -623,7 +627,14 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
                 </button>
               </div>
             ) : (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowSequenceDialog(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium text-white transition-colors"
+                >
+                  <Film className="w-4 h-4" />
+                  Create Sequence
+                </button>
                 <button
                   onClick={handleToggleSelectMode}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white transition-colors"
@@ -756,6 +767,19 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
         />
       )}
 
+      {/* Sequence Dialog */}
+      {showSequenceDialog && (
+        <CreateJobSequenceDialog
+          jobs={jobs}
+          currentJob={null}
+          onClose={() => setShowSequenceDialog(false)}
+          onCreateSequence={async (selectedJobIds, sequenceName) => {
+            await createJobSequence(selectedJobIds, sequenceName);
+            await loadJobs(); // Reload to show new sequence badges
+          }}
+        />
+      )}
+
       {/* Save Multi-Output Scene Dialog */}
       {showSaveSceneDialog && (
         <SaveMultiOutputSceneDialog
@@ -778,7 +802,7 @@ export default function JobHistoryPanel({ isOpen, onClose, workflowId = null }) 
               const categories = new Set(
                 selectedJobObjects.map(job => {
                   const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
-                  return jobData.category;
+                  return jobData.category || getModelCategory(jobData.model);
                 })
               );
 

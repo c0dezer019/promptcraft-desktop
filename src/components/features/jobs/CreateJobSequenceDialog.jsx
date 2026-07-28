@@ -5,18 +5,29 @@ import { X, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
  * CreateJobSequenceDialog - Modal for creating sequences from generation history
  * Allows selecting jobs and ordering them
  */
+// Jobs come straight from `list_jobs`, whose Rust model serializes `data`
+// and `result` as JSON strings - parse before reading fields off them.
+const parseJobData = (job) => (typeof job?.data === 'string' ? JSON.parse(job.data) : job?.data) || {};
+const parseJobResult = (job) => {
+  if (!job?.result) return null;
+  return typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
+};
+
 export function CreateJobSequenceDialog({ jobs, currentJob, onClose, onCreateSequence }) {
   const [selectedJobs, setSelectedJobs] = useState(currentJob ? [currentJob.id] : []);
   const [sequenceName, setSequenceName] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Filter to only completed jobs from the same category
-  const currentCategory = currentJob?.data?.category || 'image';
-  const availableJobs = jobs.filter(j =>
-    j.status === 'completed' &&
-    j.result?.output_url && // Must have an output
-    (!currentJob || (j.data?.category || 'image') === currentCategory)
-  );
+  const currentCategory = parseJobData(currentJob).category || 'image';
+  const availableJobs = jobs.filter(j => {
+    const result = parseJobResult(j);
+    return (
+      j.status === 'completed' &&
+      result?.output_url && // Must have an output
+      (!currentJob || (parseJobData(j).category || 'image') === currentCategory)
+    );
+  });
 
   const toggleJob = (jobId) => {
     setSelectedJobs(prev =>
@@ -50,7 +61,7 @@ export function CreateJobSequenceDialog({ jobs, currentJob, onClose, onCreateSeq
 
   // Get image preview for a job
   const getJobImage = (job) => {
-    const result = job.result;
+    const result = parseJobResult(job);
     return result?.output_url || (result?.output_data ? `data:image/png;base64,${result.output_data}` : null);
   };
 
@@ -106,7 +117,7 @@ export function CreateJobSequenceDialog({ jobs, currentJob, onClose, onCreateSeq
               <div className="space-y-2">
                 {availableJobs.map(job => {
                   const image = getJobImage(job);
-                  const jobData = job.data;
+                  const jobData = parseJobData(job);
 
                   return (
                     <button
@@ -166,7 +177,7 @@ export function CreateJobSequenceDialog({ jobs, currentJob, onClose, onCreateSeq
                   if (!job) return null;
 
                   const image = getJobImage(job);
-                  const jobData = job.data;
+                  const jobData = parseJobData(job);
 
                   return (
                     <div

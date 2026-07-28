@@ -144,6 +144,10 @@ export default function SceneOutputsGallery({
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
+    // dnd-kit gives `over` as null when the drag is released outside every
+    // droppable item - bail out instead of dereferencing over.id.
+    if (!over) return;
+
     if (active.id !== over.id) {
       const oldIndex = localOutputs.findIndex(o => o.id === active.id);
       const newIndex = localOutputs.findIndex(o => o.id === over.id);

@@ -71,7 +71,10 @@ export function useJobs(workflowId = 'default') {
       throw new Error('Jobs are only available in desktop mode');
     }
 
-    const { data } = parentJob;
+    const data = typeof parentJob.data === 'string' ? JSON.parse(parentJob.data) : parentJob.data;
+    const result = parentJob.result && typeof parentJob.result === 'string'
+      ? JSON.parse(parentJob.result)
+      : parentJob.result;
 
     try {
       // Get the correct provider name from the model
@@ -81,10 +84,10 @@ export function useJobs(workflowId = 'default') {
       let parameters = { ...(data.parameters || {}) };
 
       // If using parent as reference, get the output URL from parent job result
-      if (modifications.useAsReference && parentJob.result?.output_url) {
+      if (modifications.useAsReference && result?.output_url) {
         try {
           // Convert output URL to base64 for reference
-          const base64Data = await invoke('image_to_base64', { path: parentJob.result.output_url });
+          const base64Data = await invoke('image_to_base64', { path: result.output_url });
 
           // Add to reference_images array (new multi-image format)
           parameters.reference_images = [{
@@ -147,7 +150,8 @@ export function useJobs(workflowId = 'default') {
       throw new Error('Jobs are only available in desktop mode');
     }
 
-    const { data, result } = job;
+    const data = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
+    const result = job.result && typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
 
     // Use job result's output_url as thumbnail
     const thumbnail = result?.output_url || result?.output_data || null;
@@ -194,6 +198,58 @@ export function useJobs(workflowId = 'default') {
   }, [isDesktop]);
 
   /**
+   * Create a named sequence linking multiple jobs in a given order.
+   * Writes sequenceId/sequenceOrder/sequenceName into each job's data column.
+   * @param {string[]} jobIds - Job IDs in sequence order
+   * @param {string} sequenceName - Name for the sequence
+   */
+  const createJobSequence = useCallback(async (jobIds, sequenceName = '') => {
+    if (!isDesktop) {
+      throw new Error('Jobs are only available in desktop mode');
+    }
+
+    if (!jobIds || jobIds.length < 2) {
+      throw new Error('A sequence requires at least 2 jobs');
+    }
+
+    const sequenceId = crypto.randomUUID();
+
+    try {
+      await Promise.all(jobIds.map(async (jobId, index) => {
+        const job = jobs.find(j => j.id === jobId);
+        if (!job) {
+          throw new Error(`Job ${jobId} not found`);
+        }
+
+        const data = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
+
+        await invoke('update_job', {
+          id: jobId,
+          input: {
+            // Write the whole data object back - partial merges lose sibling fields
+            data: {
+              ...data,
+              sequenceId,
+              sequenceOrder: index,
+              sequenceName,
+            },
+          },
+        });
+      }));
+
+      console.log('[createJobSequence] Sequence created:', sequenceId);
+
+      // Reload jobs to reflect sequence metadata
+      await loadJobs();
+
+      return sequenceId;
+    } catch (err) {
+      console.error('[createJobSequence] Failed to create sequence:', err);
+      throw err;
+    }
+  }, [isDesktop, jobs, loadJobs]);
+
+  /**
    * Delete a job
    * @param {string} jobId - Job ID to delete
    */
@@ -227,6 +283,7 @@ export function useJobs(workflowId = 'default') {
     loadJobs,
     createJobVariation,
     saveJobAsScene,
+    createJobSequence,
     deleteJob,
   };
 }

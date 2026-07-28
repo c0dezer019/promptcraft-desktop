@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { usePlatform } from '../lib/promptcraft-ui';
 import { invoke } from '@tauri-apps/api/core';
-import { getModelProvider } from '../constants/models';
+import { getModelProvider, getModelCategory } from '../constants/models';
 
 /**
  * Helper function to extract outputs from a scene (handles legacy formats)
@@ -134,7 +134,7 @@ export function useScenes(workflowId = 'default') {
     // CRITICAL: Validate category consistency
     const invalidJobs = outputJobs.filter(job => {
       const jobData = typeof job.data === 'string' ? JSON.parse(job.data) : job.data;
-      return jobData.category !== category;
+      return (jobData.category || getModelCategory(jobData.model)) !== category;
     });
 
     if (invalidJobs.length > 0) {
@@ -294,8 +294,10 @@ export function useScenes(workflowId = 'default') {
       // Get the correct provider name from the model
       const provider = getModelProvider(data.model) || 'openai';
 
-      // Prepare parameters
-      let parameters = { ...(data.params || {}) };
+      // Prepare parameters - scenes created from Generation History store
+      // settings under data.prompt.params; older scene-created scenes used
+      // data.params directly, so fall back to that legacy shape.
+      let parameters = { ...(data.prompt?.params || data.params || {}) };
 
       // If using parent as reference, convert thumbnail to base64
       if (modifications.useAsReference && parentScene.thumbnail) {

@@ -85,18 +85,21 @@ export function SceneManager({ onLoadScene, onClose }) {
     }
   }, [reloadScenes]);
 
-  // Get jobs for a scene (stub - not implemented yet)
+  // Get jobs for a scene - the manager loads scenes from every workflow, so
+  // jobs must be queried against the scene's own workflow, not 'default'.
   const getSceneJobs = useCallback(async (sceneId) => {
     if (!isDesktop) return [];
 
     try {
-      const jobs = await invoke('list_jobs', { workflowId: 'default' });
+      const scene = scenes.find(s => s.id === sceneId);
+      const workflowId = scene?.workflow_id || 'default';
+      const jobs = await invoke('list_jobs', { workflowId });
       return jobs.filter(job => job.scene_id === sceneId);
     } catch (err) {
       console.error('Failed to get scene jobs:', err);
       return [];
     }
-  }, [isDesktop]);
+  }, [isDesktop, scenes]);
 
   // Scenes auto-load via useScenes hook
   // Note: Removed auto-refresh (was causing loading spinner every 5s)

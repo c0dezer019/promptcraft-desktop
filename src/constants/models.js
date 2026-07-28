@@ -293,6 +293,16 @@ export function getModelProvider(modelId) {
 }
 
 /**
+ * Get category ('image' or 'video') for a model ID.
+ * Local tool jobs (ComfyUI/A1111/InvokeAI) have no cloud model entry and are
+ * image-only, so unresolved model IDs fall back to 'image'.
+ */
+export function getModelCategory(modelId) {
+    const model = getModelById(modelId);
+    return model?.category || 'image';
+}
+
+/**
  * Get tier for a model ID
  */
 export function getModelTier(modelId) {
